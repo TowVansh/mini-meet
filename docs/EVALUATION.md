@@ -78,11 +78,21 @@ Graphs in `results/`: `bars_video_kbps.png`, `bars_freezes.png`, `bars_audio_con
 
 ## NAT traversal results
 
-Fill in from the live demo (see NAT_DEMO.md):
+Live demo on 2026-10-07 (procedure in NAT_DEMO.md, data in `results/nat-demo.csv`). Signalling went through a cloudflared HTTPS tunnel; media went directly between the devices.
 
 | Network A | Network B | Selected candidate pair | Connected? |
 |---|---|---|---|
-| | | | |
+| Laptop on college Wi-Fi (M-VIT 2) | Phone on mobile data | `srflx->srflx` (UDP), all 431 samples | Yes, 65 s call, audio and video both ways |
+| Same laptop, two browser windows (control) | same | `host->host` | Yes |
+
+Both sides were behind NAT and the media still went peer-to-peer. Each side used the public address learned from STUN (`srflx`), and no relay was needed, which shows neither NAT was symmetric. Call quality on this path:
+
+| Direction | RTT | Loss | GCC estimate | Video received |
+|---|---|---|---|---|
+| Laptop → Phone | ~78 ms | 0 % | ~200 kbps | ~115 kbps, 270p, 19 fps |
+| Phone → Laptop | ~51 ms | 0 % | ~90 kbps | ~36 kbps, 320p, 24 fps |
+
+The call was bandwidth-limited (`qualityLimitationReason = bandwidth` in almost every sample), mostly by the phone's mobile uplink. There was no packet loss, but GCC kept its estimate low, and the AIMD controller reached its lowest rung (level 5) early in the call, during a short RTT spike above 400 ms. There were 10–15 video freezes per receiver. This matches the lab results: on a narrow link, GCC's estimate is the binding limit, and video quality falls while audio stays intact.
 
 ## Threats to validity
 
