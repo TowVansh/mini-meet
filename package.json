@@ -1,0 +1,19 @@
+{
+  "name": "mini-meet",
+  "version": "1.0.0",
+  "description": "Two-to-four party WebRTC video calling with a custom signalling server, STUN NAT traversal and impairment evaluation.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test test/*.test.js",
+    "bench": "node bench/run-matrix.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  },
+  "optionalDependencies": {
+    "puppeteer": "^23.11.1"
+  }
+}

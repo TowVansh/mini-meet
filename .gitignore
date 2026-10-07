@@ -1,0 +1,6 @@
+node_modules/
+certs/
+results/*.csv
+results/*.png
+results/*.log
+analysis/__pycache__/

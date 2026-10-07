@@ -1,0 +1,53 @@
+:root {
+  --bg: #111418;
+  --panel: #1c2128;
+  --text: #e6e8eb;
+  --muted: #8b949e;
+  --accent: #3b82f6;
+  --danger: #dc2626;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }
+button {
+  background: var(--panel); color: var(--text); border: 1px solid #30363d;
+  border-radius: 6px; padding: 8px 14px; font-size: 14px; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button.danger { background: var(--danger); border-color: var(--danger); }
+.error { color: #f87171; min-height: 1.2em; }
+
+#lobby { max-width: 380px; margin: 10vh auto; padding: 0 16px; }
+#lobby h1 { margin-bottom: 4px; }
+.sub { color: var(--muted); margin-top: 0; }
+#join-form { display: flex; flex-direction: column; gap: 12px; }
+#join-form label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+#join-form label.check { flex-direction: row; align-items: center; gap: 8px; }
+#join-form input:not([type=checkbox]) {
+  padding: 8px; border-radius: 6px; border: 1px solid #30363d; background: var(--panel); color: var(--text);
+}
+#join-form button { background: var(--accent); border-color: var(--accent); }
+
+#call { display: flex; flex-direction: column; height: 100vh; }
+#call header, #call footer { display: flex; gap: 10px; align-items: center; padding: 10px 16px; background: var(--panel); }
+#call header { justify-content: space-between; }
+#call footer { justify-content: center; flex-wrap: wrap; }
+#status { color: var(--muted); font-size: 13px; }
+
+#grid { flex: 1; display: grid; gap: 8px; padding: 8px; grid-template-columns: 1fr; grid-auto-rows: 1fr; min-height: 0; }
+#grid.n2 { grid-template-columns: 1fr 1fr; }
+#grid.n3, #grid.n4 { grid-template-columns: 1fr 1fr; }
+@media (max-width: 640px) { #grid.n2, #grid.n3, #grid.n4 { grid-template-columns: 1fr; } }
+
+.tile { position: relative; background: #000; border-radius: 8px; overflow: hidden; min-height: 0; }
+.tile video { width: 100%; height: 100%; object-fit: contain; }
+.tile.self video { transform: scaleX(-1); }
+.tile .name {
+  position: absolute; left: 8px; bottom: 8px; background: rgba(0,0,0,.6);
+  padding: 2px 8px; border-radius: 4px; font-size: 13px;
+}
+.tile .stats {
+  position: absolute; right: 8px; top: 8px; margin: 0; background: rgba(0,0,0,.65);
+  padding: 6px 8px; border-radius: 4px; font: 11px/1.4 ui-monospace, monospace; color: #a5f3a5;
+}
+.tile .stats:empty { display: none; }
+body.hide-stats .tile .stats { display: none; }

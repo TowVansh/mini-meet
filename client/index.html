@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mini-Meet</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <section id="lobby">
+    <h1>Mini-Meet</h1>
+    <p class="sub">2–4 person WebRTC calls · custom signalling · STUN NAT traversal</p>
+    <form id="join-form">
+      <label>Your name <input id="name" maxlength="32" required></label>
+      <label>Room <input id="room" maxlength="32" pattern="[A-Za-z0-9_\-]+" required></label>
+      <label class="check"><input type="checkbox" id="adapt" checked> Adaptive quality controller</label>
+      <label class="check"><input type="checkbox" id="record"> Record stats to server (results/*.csv)</label>
+      <button type="submit">Join call</button>
+    </form>
+    <p id="lobby-error" class="error"></p>
+  </section>
+
+  <section id="call" hidden>
+    <header>
+      <span id="room-label"></span>
+      <span id="status"></span>
+    </header>
+    <div id="grid"></div>
+    <footer>
+      <button id="btn-mic">Mute</button>
+      <button id="btn-cam">Camera off</button>
+      <button id="btn-stats">Hide stats</button>
+      <button id="btn-leave" class="danger">Leave</button>
+    </footer>
+  </section>
+
+  <template id="tile-tpl">
+    <div class="tile">
+      <video autoplay playsinline></video>
+      <div class="name"></div>
+      <pre class="stats"></pre>
+    </div>
+  </template>
+
+  <script src="signalling.js"></script>
+  <script src="adapt.js"></script>
+  <script src="stats.js"></script>
+  <script src="peer.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
