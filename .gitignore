@@ -1,6 +1,5 @@
 node_modules/
 certs/
-results/*.csv
-results/*.png
 results/*.log
+results/live-*.csv
 analysis/__pycache__/
