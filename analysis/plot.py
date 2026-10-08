@@ -102,7 +102,7 @@ def timeline(df, profile):
         inn = g[g.direction == "in"].groupby("t").mean(numeric_only=True)
         tag = f"adapt {'on' if adapt else 'off'}"
         axes[0].plot(out.index, out.bitrate_kbps, label=f"send kbps ({tag})")
-        axes[0].plot(out.index, out.avail_out_kbps, "--", label=f"BWE kbps ({tag})")
+        axes[0].plot(out.index, out.avail_out_kbps, "--", label=f"target kbps ({tag})")
         axes[1].plot(inn.index, inn.fps, label=tag)
         axes[2].plot(inn.index, inn.loss_pct, label=tag)
         axes[3].plot(out.index, out.rtt_ms, label=tag)

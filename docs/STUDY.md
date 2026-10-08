@@ -231,9 +231,12 @@ How to use this guide: go through the parts in order. For each topic, learn the 
 ## Part 7: Results you must remember (from EVALUATION.md)
 
 - 2 peers, clean: 1200 kbps, 640×480, 20 fps, RTT < 1 ms.
-- 4-peer mesh: all 12 streams at 640×480, 20 fps.
-- Random loss ≤ 5 %: NACK + FEC hide it.
-- 1 Mbit/s link without adaptation: RTT ~10 s, ~57 % loss, video stops, audio broken. **With adaptation: smooth 20 fps at about 300–800 kbps.**
+- 4-peer mesh: all 12 streams at 640×480, 20 fps (each client uploads 3 copies, ~3.6 Mbit/s).
+- Random loss ≤ 5 %: NACK + FEC hide it (no freezes, 0.3 % audio concealed). At 20 % loss: 31 freezes.
+- **1 Mbit/s link without adaptation: RTT 10.4 s, 13 % loss, 29 % audio concealed (bufferbloat). With adaptation: 280 kbps, 20 fps, RTT 2.5 ms, 0 % loss.**
+- 500 kbit/s: fixed rate gives 0 fps and RTT 18 s. Adaptive gives 20 fps and RTT 23 ms.
+- Controller weaknesses: it over-reacts to random loss and jitter (thinks they mean congestion), and it is too slow at 250 kbit/s (feedback is stuck in the same queue; slow start would fix it).
+- Bug found by testing: without a windowed minimum RTT, a fixed +100 ms delay was treated as congestion forever.
 - Real NAT demo: college Wi-Fi ↔ mobile hotspot, `srflx->srflx`, RTT median 85 ms, spikes to 1.15 s on the hotspot uplink.
 
 ---
