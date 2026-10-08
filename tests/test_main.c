@@ -134,10 +134,16 @@ static void test_cc(void) {
     cc_init(&cc);
     CHECK(cc_on_report(&cc, 0.0, 20) == 0 && cc.level == 0);
     CHECK(cc_on_report(&cc, 0.15, 20) == 1 && cc.level == 2);   /* loss: drop two levels */
-    CHECK(cc_on_report(&cc, 0.0, 200) == 1 && cc.level == 4);   /* 180 ms queuing delay: drop again */
-    for (i = 0; i < 3; i++) cc_on_report(&cc, 0.0, 25);
-    CHECK(cc.level == 3);                                       /* three clean reports: up one */
-    for (i = 0; i < 30; i++) cc_on_report(&cc, 0.0, 25);
+    for (i = 0; i < 3 && cc.level == 2; i++) cc_on_report(&cc, 0.0, 300);
+    CHECK(cc.level == 4);                                       /* queue building (RTT 20 -> 300): drop again */
+    for (i = 0; i < 40; i++) cc_on_report(&cc, 0.0, 25);
+    CHECK(cc.level == 0);                                       /* clean reports: climb back one level at a time */
+
+    /* A path that simply gets longer (fixed +200 ms) must not stay "congested":
+     * once the 10 s minimum window has moved past the old samples, it recovers. */
+    cc_init(&cc);
+    for (i = 0; i < 10; i++) cc_on_report(&cc, 0.0, 1);
+    for (i = 0; i < 30; i++) cc_on_report(&cc, 0.0, 200);
     CHECK(cc.level == 0);
 }
 

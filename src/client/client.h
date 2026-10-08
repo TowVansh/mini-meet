@@ -153,6 +153,7 @@ typedef struct {
     struct { int used; uint16_t seq; uint16_t len; uint8_t data[PKT_MAX]; uint64_t sent_us; } *txhist;
     volatile int enc_level;     /* ladder level applied by the encoder */
     volatile int force_key;
+    uint64_t   last_key_req_us;
     volatile int mic_on, cam_on;
 
     /* self view (g_lock) */

@@ -1,0 +1,68 @@
+03:58:21 [ice] host candidate 172.31.114.87:41536
+03:58:21 [sig] connected to 127.0.0.1:9300
+03:58:21 [sig] joined room b-rate2m-1 as botA (id a849a73c), 0 already here
+03:58:22 [sig] botB joined
+03:58:22 [ice] botB: remote host candidate 172.31.114.87:44128
+03:58:22 [ice] botB: CONNECTED via host->host, media to 172.31.114.87:44128 (6 ms)
+03:58:23 [stats] botB     host->host rtt   -1ms | in v  953kbps 19fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1193kbps lvl 0
+03:58:24 [stats] botB     host->host rtt    0ms | in v 1233kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1246kbps lvl 0
+03:58:25 [stats] botB     host->host rtt    0ms | in v 1223kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1245kbps lvl 0
+03:58:26 [stats] botB     host->host rtt    0ms | in v 1137kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1226kbps lvl 0
+03:58:27 [stats] botB     host->host rtt    1ms | in v 1152kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1205kbps lvl 0
+03:58:28 [stats] botB     host->host rtt    0ms | in v 1282kbps 21fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1188kbps lvl 0
+03:58:28 [stats] botB     host->host rtt    0ms | in v 1205kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1151kbps lvl 0
+03:58:29 [stats] botB     host->host rtt    2ms | in v 1211kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1176kbps lvl 0
+03:58:30 [stats] botB     host->host rtt    0ms | in v 1207kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1202kbps lvl 0
+03:58:31 [stats] botB     host->host rtt    0ms | in v 1240kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1229kbps lvl 0
+03:58:32 [stats] botB     host->host rtt    0ms | in v 1167kbps 19fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1113kbps lvl 0
+03:58:33 [stats] botB     host->host rtt   22ms | in v  954kbps 16fps 640x480 loss  0.0% jit   6ms frz 0 nack 0 rtx 0 | a conceal 42.6% fec 0 | out 1071kbps lvl 0
+03:58:33 [cc] botB reported loss 0.0% rtt 262 ms -> encoder level 2 (500 kbps 480x360)
+03:58:34 [stats] botB     host->host rtt  262ms | in v  882kbps 24fps 480x360 loss  0.0% jit  12ms frz 0 nack 0 rtx 0 | a conceal 27.3% fec 0 | out  685kbps lvl 2
+03:58:35 [stats] botB     host->host rtt   28ms | in v  203kbps 21fps 320x240 loss  0.0% jit   2ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  510kbps lvl 2
+03:58:36 [stats] botB     host->host rtt    9ms | in v  190kbps 20fps 320x240 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  518kbps lvl 2
+03:58:36 [cc] botB reported loss 0.0% rtt 10 ms -> encoder level 1 (800 kbps 640x480)
+03:58:37 [stats] botB     host->host rtt   10ms | in v  176kbps 20fps 320x240 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  749kbps lvl 1
+03:58:38 [stats] botB     host->host rtt   34ms | in v  282kbps 20fps 320x240 loss  0.0% jit   2ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  828kbps lvl 1
+03:58:38 [stats] botB     host->host rtt   26ms | in v  287kbps 20fps 320x240 loss  0.0% jit   3ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  845kbps lvl 1
+03:58:38 [cc] botB reported loss 0.0% rtt 19 ms -> encoder level 0 (1200 kbps 640x480)
+03:58:39 [stats] botB     host->host rtt   19ms | in v  304kbps 20fps 320x240 loss  0.0% jit   3ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1075kbps lvl 0
+03:58:40 [stats] botB     host->host rtt   27ms | in v  460kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1231kbps lvl 0
+03:58:41 [stats] botB     host->host rtt   67ms | in v  497kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1230kbps lvl 0
+03:58:42 [stats] botB     host->host rtt   35ms | in v  489kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1291kbps lvl 0
+03:58:43 [stats] botB     host->host rtt   60ms | in v  525kbps 20fps 480x360 loss  0.0% jit   6ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1253kbps lvl 0
+03:58:44 [stats] botB     host->host rtt   63ms | in v  501kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1226kbps lvl 0
+03:58:45 [stats] botB     host->host rtt   60ms | in v  464kbps 20fps 480x360 loss  0.0% jit   4ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1152kbps lvl 0
+03:58:46 [stats] botB     host->host rtt   55ms | in v  476kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1223kbps lvl 0
+03:58:47 [stats] botB     host->host rtt   58ms | in v  502kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1250kbps lvl 0
+03:58:48 [stats] botB     host->host rtt   54ms | in v  507kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1229kbps lvl 0
+03:58:48 [stats] botB     host->host rtt   56ms | in v  503kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1199kbps lvl 0
+03:58:49 [stats] botB     host->host rtt   59ms | in v  510kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1234kbps lvl 0
+03:58:50 [stats] botB     host->host rtt   50ms | in v  479kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1208kbps lvl 0
+03:58:51 [stats] botB     host->host rtt   48ms | in v  490kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1196kbps lvl 0
+03:58:52 [stats] botB     host->host rtt   49ms | in v  489kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1148kbps lvl 0
+03:58:53 [stats] botB     host->host rtt   40ms | in v  507kbps 20fps 480x360 loss  0.0% jit   6ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1172kbps lvl 0
+03:58:54 [stats] botB     host->host rtt   50ms | in v  471kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1267kbps lvl 0
+03:58:55 [stats] botB     host->host rtt   47ms | in v  491kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1293kbps lvl 0
+03:58:56 [stats] botB     host->host rtt   50ms | in v  478kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1265kbps lvl 0
+03:58:57 [stats] botB     host->host rtt   37ms | in v  503kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1235kbps lvl 0
+03:58:58 [stats] botB     host->host rtt   36ms | in v  467kbps 20fps 480x360 loss  0.0% jit   4ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1209kbps lvl 0
+03:58:58 [stats] botB     host->host rtt   34ms | in v  508kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1173kbps lvl 0
+03:58:59 [stats] botB     host->host rtt   37ms | in v  700kbps 19fps 640x480 loss  0.0% jit   6ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1187kbps lvl 0
+03:59:00 [stats] botB     host->host rtt   84ms | in v  746kbps 19fps 640x480 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  2.0% fec 0 | out 1231kbps lvl 0
+03:59:00 [cc] botB reported loss 0.0% rtt 211 ms -> encoder level 2 (500 kbps 480x360)
+03:59:01 [stats] botB     host->host rtt  211ms | in v  434kbps 22fps 320x240 loss  0.0% jit   4ms frz 0 nack 0 rtx 0 | a conceal 27.7% fec 0 | out  655kbps lvl 2
+03:59:02 [stats] botB     host->host rtt    2ms | in v   98kbps 20fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  524kbps lvl 2
+03:59:03 [stats] botB     host->host rtt    2ms | in v   98kbps 20fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  521kbps lvl 2
+03:59:03 [cc] botB reported loss 0.0% rtt 2 ms -> encoder level 1 (800 kbps 640x480)
+03:59:04 [stats] botB     host->host rtt    2ms | in v  105kbps 20fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  751kbps lvl 1
+03:59:05 [stats] botB     host->host rtt    3ms | in v  195kbps 20fps 320x240 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  828kbps lvl 1
+03:59:06 [stats] botB     host->host rtt    2ms | in v  170kbps 20fps 320x240 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  846kbps lvl 1
+03:59:06 [cc] botB reported loss 0.0% rtt 1 ms -> encoder level 0 (1200 kbps 640x480)
+03:59:07 [stats] botB     host->host rtt    1ms | in v  191kbps 20fps 320x240 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1068kbps lvl 0
+03:59:08 [stats] botB     host->host rtt   19ms | in v  281kbps 20fps 320x240 loss  0.0% jit   2ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1225kbps lvl 0
+03:59:08 [stats] botB     host->host rtt   23ms | in v  295kbps 20fps 320x240 loss  0.0% jit   3ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1257kbps lvl 0
+03:59:09 [stats] botB     host->host rtt   17ms | in v  296kbps 20fps 320x240 loss  0.0% jit   3ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1257kbps lvl 0
+03:59:10 [stats] botB     host->host rtt   24ms | in v  466kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1202kbps lvl 0
+03:59:11 [stats] botB     host->host rtt   29ms | in v  500kbps 20fps 480x360 loss  0.0% jit   6ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1184kbps lvl 0
+03:59:12 [stats] botB     host->host rtt   24ms | in v  502kbps 20fps 480x360 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1211kbps lvl 0
+03:59:13 [main] bye

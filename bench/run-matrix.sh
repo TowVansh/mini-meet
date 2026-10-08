@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
-# Impairment evaluation for the C client. For each netem profile and
-# adaptation setting: start a call between headless mm clients on this
-# machine, apply the profile on lo after a clean warm-up, record stats, stop.
+# Impairment evaluation for the C client.
 #
-# Run as root (tc needs it), from Windows:
+# Two Linux network namespaces joined by a veth pair act as two separate
+# hosts:   [mmA: 10.10.0.1  vA] <----veth----> [vB  10.10.0.2 :mmB]
+# netem runs on BOTH veth ends, so each direction of the call is impaired
+# separately, like a real access link (a 1 Mbit/s profile = 1 Mbit/s each way).
+# mm-server and botA run in mmA, botB in mmB.
+#
+# For each netem profile and adaptation setting: start the call, keep it
+# clean for WARMUP seconds, apply the profile, record DURATION seconds.
+#
+# Run as root (namespaces and tc need it), from Windows:
 #   wsl -d Ubuntu -u root -- bash /mnt/e/MiniMeet/bench/run-matrix.sh
-# Env: PROFILES="baseline loss5" ADAPT="0 1" DURATION=45 WARMUP=10 PEERS=2 TAG=eval
+# Env: PROFILES="baseline loss5" ADAPT="0 1" DURATION=45 WARMUP=10 TAG=eval
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -13,39 +20,53 @@ PROFILES="${PROFILES:-baseline loss1 loss5 loss10 loss20 burst5 delay100 jitter3
 ADAPT="${ADAPT:-0 1}"
 DURATION="${DURATION:-45}"
 WARMUP="${WARMUP:-10}"
-PEERS="${PEERS:-2}"
 TAG="${TAG:-$(date +%Y%m%d%H%M)}"
-PORT="${PORT:-9300}"
-NAMES=(botA botB botC botD)
+PORT=9300
 
 mkdir -p results
 make -s all || exit 1
-cleanup() { scripts/impair.sh clear >/dev/null; kill "$SERVER" 2>/dev/null; }
+
+setup_ns() {
+  ip netns del mmA 2>/dev/null; ip netns del mmB 2>/dev/null
+  ip netns add mmA && ip netns add mmB
+  ip link add vA type veth peer name vB
+  ip link set vA netns mmA && ip link set vB netns mmB
+  ip -n mmA addr add 10.10.0.1/24 dev vA && ip -n mmB addr add 10.10.0.2/24 dev vB
+  for ns in mmA mmB; do ip -n $ns link set lo up; done
+  ip -n mmA link set vA up && ip -n mmB link set vB up
+  # default routes so each client finds its "LAN" address as host candidate
+  ip -n mmA route add default via 10.10.0.2 && ip -n mmB route add default via 10.10.0.1
+}
+impair() {   # apply profile to both directions
+  ip netns exec mmA scripts/impair.sh "$1" vA > /dev/null
+  ip netns exec mmB scripts/impair.sh "$1" vB > /dev/null
+}
+cleanup() { kill "$SERVER" 2>/dev/null; ip netns del mmA 2>/dev/null; ip netns del mmB 2>/dev/null; }
 trap cleanup EXIT
 
-bin/mm-server "$PORT" > results/server.log 2>&1 &
+setup_ns || { echo "namespace setup failed"; exit 1; }
+ip netns exec mmA bin/mm-server "$PORT" > results/server.log 2>&1 &
 SERVER=$!
 sleep 0.5
 
 for profile in $PROFILES; do
   for adapt in $ADAPT; do
-    run="${TAG}_${profile}_adapt${adapt}_p${PEERS}"
+    run="${TAG}_${profile}_adapt${adapt}_p2"
     echo "=== $run"
-    scripts/impair.sh clear >/dev/null
+    impair clear
     flag=""; [ "$adapt" = "0" ] && flag="--no-adapt"
-    pids=()
-    for ((i = 0; i < PEERS; i++)); do
-      name="${NAMES[$i]}"
-      bin/mm --server "127.0.0.1:$PORT" --room "b-${profile}-${adapt}" --name "$name" --test --no-stun \
-        --headless $flag --duration $((WARMUP + DURATION + PEERS - i)) \
-        --csv "results/${run}__${name}.csv" --run "$run" > "results/${run}__${name}.log" 2>&1 &
-      pids+=($!)
-      sleep 1
-    done
+    common="--room b-${profile}-${adapt} --test --no-stun --headless $flag --run $run"
+    ip netns exec mmA bin/mm --server 127.0.0.1:$PORT --name botA $common --duration $((WARMUP + DURATION + 2)) \
+      --csv "results/${run}__botA.csv" > "results/${run}__botA.log" 2>&1 &
+    a=$!
+    sleep 1
+    ip netns exec mmB bin/mm --server 10.10.0.1:$PORT --name botB $common --duration $((WARMUP + DURATION + 1)) \
+      --csv "results/${run}__botB.csv" > "results/${run}__botB.log" 2>&1 &
+    b=$!
     sleep "$WARMUP"
-    scripts/impair.sh "$profile" > /dev/null
-    wait "${pids[@]}"
-    scripts/impair.sh clear > /dev/null
+    impair "$profile"
+    wait $a $b
+    impair clear
     sleep 1
   done
 done

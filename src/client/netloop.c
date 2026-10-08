@@ -117,7 +117,11 @@ static void on_rtcp(peer_t *p, const uint8_t *buf, size_t len, uint64_t now_us) 
         }
     }
     for (i = 0; i < info.nnack; i++) tx_resend(p, info.nack[i]);
-    if (info.pli) g.force_key = 1;
+    /* Several peers may ask at once; one keyframe per 500 ms serves them all. */
+    if (info.pli && now_us - g.last_key_req_us > 500000) {
+        g.last_key_req_us = now_us;
+        g.force_key = 1;
+    }
 }
 
 /* ---- statistics ---- */

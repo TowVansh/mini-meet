@@ -27,7 +27,11 @@ static void send_nack_pli(peer_t *p, const uint16_t *seqs, int n, int pli) {
 }
 
 static void request_keyframe(peer_t *p, uint64_t now_us) {
-    if (now_us - p->last_pli_us < 300000) return;   /* rate-limit PLIs */
+    /* Rate-limit PLIs: a keyframe takes about one RTT to arrive, and every
+     * extra keyframe is a burst that can make congestion worse (PLI storm). */
+    uint64_t gap = p->rtt_ms > 0 ? (uint64_t)(p->rtt_ms * 1500) : 300000;
+    if (gap < 300000) gap = 300000;
+    if (now_us - p->last_pli_us < gap) return;
     p->last_pli_us = now_us;
     send_nack_pli(p, NULL, 0, 1);
 }
@@ -151,7 +155,7 @@ static void video_tick(peer_t *p, uint64_t now_us) {
     int guard = 0;
     uint64_t wait_us = VIDEO_WAIT_MIN_US;
     if (p->rtt_ms > 0) {
-        uint64_t w = (uint64_t)(p->rtt_ms * 2500) + 30000;   /* room for ~2 retransmission attempts */
+        uint64_t w = (uint64_t)(p->rtt_ms * 1500) + 40000;   /* room for one NACK round trip */
         if (w > wait_us) wait_us = w;
         if (wait_us > 600000) wait_us = 600000;
     }
@@ -241,6 +245,15 @@ static void nack_tick(peer_t *p, uint64_t now_us) {
             continue;
         }
         if (k->last_sent_us && now_us - k->last_sent_us < resend_us) continue;
+        /* Reordering tolerance: a "gap" may just be packets overtaking each
+         * other (jitter). Wait about two jitter periods before the first NACK,
+         * otherwise reordering triggers needless retransmissions. */
+        if (!k->last_sent_us) {
+            uint64_t reorder_us = (uint64_t)(p->rxv.jitter / 90.0 * 2000);
+            if (reorder_us < 5000) reorder_us = 5000;
+            if (reorder_us > 80000) reorder_us = 80000;
+            if (now_us - k->first_us < reorder_us) continue;
+        }
         if (n < 64) {
             list[n++] = k->seq;
             k->last_sent_us = now_us;
