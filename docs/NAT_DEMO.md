@@ -40,9 +40,22 @@ If both sides are behind **symmetric NAT** (common on mobile carrier-grade NAT),
 
 ## Results
 
-| PC 1 network | PC 2 network | Selected pair | Result |
-|---|---|---|---|
-| Same PC, two clients (control) | — | host->host | Connected (RTT < 1 ms) |
-| | | | |
+Live run on 2026-10-08: signalling through `bore.pub`, STUN via `stun.l.google.com`. Data is in `results/nat_c__Laptop.csv`.
 
-The WebRTC prototype's run on 2026-10-07 (laptop on college Wi-Fi, phone on mobile data) connected `srflx->srflx`. It used the same STUN-and-hole-punching method, so those two NATs are known to be traversable.
+| PC 1 network | PC 2 network | Candidates | Selected pair | Result |
+|---|---|---|---|---|
+| Same PC, two clients (control) | — | host | host->host | Connected, RTT < 1 ms |
+| Laptop on college Wi-Fi (private 172.16.240.143, public 36.255.16.51) | Second laptop on phone hotspot / mobile data (private 10.129.165.x, public 152.57.86.31) | host + srflx on both | **srflx->srflx** (all 1404 samples) | Connected 3 times, ICE took 99–752 ms each time. Call lasted about 9 minutes in total. |
+
+Both laptops were behind NAT on different ISPs. The media flowed directly between the two public mappings that STUN discovered, and nothing was relayed. Neither NAT was symmetric.
+
+Call quality on this real path:
+
+| | Median | Notes |
+|---|---|---|
+| RTT | 85 ms | 90th percentile **1.15 s**: the mobile uplink buffered heavily in bursts (bufferbloat) |
+| Packet loss | < 0.6 % | |
+| Video received | ~230 kbps, 20 fps, 320×240 (median) | The controller averaged level 3.7. It dropped to 160×120 during each RTT spike and climbed back to 480×360 within ~10 s when the queue drained (AIMD sawtooth, see the `[cc]` log lines) |
+| Audio | 16.8 % of frames concealed on average | Almost all of it during the RTT spikes, when packets arrived after their playout time |
+
+The server log also shows the heartbeat working. When one client window was closed, the tunnel kept the TCP connection half-open, so no FIN arrived. The server dropped the silent client after its idle timeout and sent `PEER_LEFT` to the room.
