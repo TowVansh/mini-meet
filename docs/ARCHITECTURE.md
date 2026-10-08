@@ -1,125 +1,136 @@
-# Mini-Meet Architecture
+# Mini-Meet Architecture (C version)
 
-## Overview
+Mini-Meet is a 2–4 person audio/video calling application written in C. It runs on Windows and Linux. The networking code is written from scratch on plain sockets: signalling, STUN, NAT hole punching, RTP/RTCP, jitter buffers, retransmission and rate control. Libraries are used only for capture and codecs: FFmpeg (camera/mic input), libvpx (VP8 video), libopus (audio) and SDL2 (window and speakers).
 
-Mini-Meet is a 2–4 person audio/video calling app. It has two separate paths:
+## Programs
+
+| Binary | Source | Role |
+|---|---|---|
+| `mm-server` | `src/server/mm_server.c` | TCP signalling server. Rooms of up to 4. Relays candidates. Never touches media. |
+| `mm-stun` | `src/stun/mm_stun.c` | Optional STUN server (RFC 5389 Binding), so the project does not have to rely on Google's |
+| `mm` | `src/client/*.c` | The call client: capture, encode, send, receive, decode, display |
+
+## Two separate paths
 
 | | Signalling path | Media path |
 |---|---|---|
-| Purpose | Find peers, exchange SDP and ICE candidates | Carry audio and video |
-| Endpoints | Browser ↔ Node.js server | Browser ↔ browser, directly |
-| Transport | WebSocket over TCP (TLS when `wss://`) | RTP/RTCP over SRTP, over DTLS-negotiated keys, over UDP |
-| Volume | A few KB per call setup | 0.1–2 Mbit/s per stream, continuous |
-| Reliability need | Every message must arrive, in order, so TCP fits | Late data is useless, so UDP fits; loss is concealed or repaired |
-| If server dies | New joins fail | Calls already running keep working |
+| Purpose | Find peers, exchange network candidates | Carry audio and video |
+| Endpoints | client ↔ `mm-server` | client ↔ client directly (full mesh) |
+| Transport | TCP, newline-delimited text protocol | UDP: RTP + RTCP + STUN on **one** port |
+| Volume | A few hundred bytes per call setup | 0.1–1.3 Mbit/s per stream, continuous |
+| Reliability need | Every line must arrive, in order, so TCP fits | Late data is useless, so UDP fits; loss is repaired selectively (NACK, FEC) or concealed |
+| If the server dies | New joins fail | Calls already running keep going |
 
 ```
-                    +-----------------------------+
-                    |  Node.js signalling server  |
-                    |  express (static client)    |
-                    |  ws  /ws  (rooms, relay)    |
-                    |  /api/stats  -> results/*.csv
-                    +-----------------------------+
-                       ^  WebSocket (TCP)   ^
-         signalling    |                    |    signalling
-                       v                    v
- +------------------------+          +------------------------+
- | Browser A              |  SRTP /  | Browser B              |
- | getUserMedia           |  UDP     | getUserMedia           |
- | RTCPeerConnection(B) <==========> RTCPeerConnection(A)     |
- | StatsSampler, Adapter  |  media   | StatsSampler, Adapter  |
- +------------------------+          +------------------------+
-            ^                                    ^
-            |  STUN binding request (UDP 19302)  |
-            +--------> STUN server <-------------+
-                      (stun.l.google.com)
+                 +--------------------------+
+                 |  mm-server  (TCP 9000)   |
+                 |  select() loop, rooms    |
+                 +--------------------------+
+                    ^   text lines (TCP)   ^
+                    |                      |
+ +------------------+---+              +---+------------------+
+ | mm (A)               |   RTP/RTCP   | mm (B)               |
+ | capture -> VP8/Opus  | <==========> | capture -> VP8/Opus  |
+ | jitter buf -> decode |  UDP, P2P    | jitter buf -> decode |
+ | SDL window/audio     |              | SDL window/audio     |
+ +----------------------+              +----------------------+
+            |   STUN Binding (UDP)              |
+            +------> STUN server <--------------+
+                 (stun.l.google.com or mm-stun)
 ```
 
-## Components
+## Client internals (`src/client`)
 
-| File | Role |
+| File | What it does |
 |---|---|
-| `server/index.js` | HTTP(S) server, static client, WebSocket endpoint, heartbeat, stats API |
-| `server/protocol.js` | Message schema and validation, error codes |
-| `server/rooms.js` | Room registry: join/leave, room cap, relaying within a room only |
-| `server/stats.js` | Writes stats rows to CSV |
-| `client/signalling.js` | WebSocket client for the protocol |
-| `client/peer.js` | Mesh of `RTCPeerConnection`s, offer/answer, queuing ICE candidates that arrive early |
-| `client/stats.js` | `getStats()` sampler, turns counters into per-second rates, overlay text |
-| `client/adapt.js` | AIMD quality controller |
-| `client/app.js` | UI, local media, join/leave, stats upload |
-| `bench/*.js` | Headless bots and the impairment matrix |
-| `scripts/impair.sh` | `tc netem` profiles |
-| `analysis/plot.py` | Summary tables and graphs |
+| `main.c` | Command-line options, startup and shutdown |
+| `sig.c` | Signalling client: TCP connect, line assembly, JOIN/CAND/PING |
+| `ice.c` | Candidate gathering (host + STUN srflx), connectivity checks, hole punching, keepalive |
+| `netloop.c` | Network thread: `select()` over TCP + UDP, packet demultiplexing, RTCP send/receive, stats/CSV |
+| `rtp.c` | RTP header, RTCP SR/RR/NACK/PLI encoding and decoding, RFC 3550 receiver statistics |
+| `media_in.c` | Capture (camera/mic/file/test pattern), VP8/Opus encoding, packetization, retransmission history |
+| `media_out.c` | Video and audio jitter buffers, NACK/PLI generation, decoding, freeze detection, SDL window, audio mixing |
+| `cc.c` | AIMD rate controller and its bitrate/resolution ladder |
+| `font.c` | 3×5 pixel font for on-screen text (no font library) |
 
-## Media path in detail
+Threads: **main** (SDL window/events), **net** (all socket I/O and timers), **video-in** and **audio-in** (capture plus encode). One mutex (`g.lock`) protects the peer table and the sender state.
 
-1. **Capture**: `getUserMedia` gives one audio track (48 kHz) and one video track (up to 1280×720 at 30 fps).
-2. **Encode**: Opus for audio (in-band FEC on), VP8 for video. These are negotiated in SDP.
-3. **Packetise**: RTP. Sequence numbers let the receiver detect loss. Timestamps drive the jitter buffer.
-4. **Secure**: DTLS handshake on the media 5-tuple, which derives SRTP keys. Every media packet is encrypted and authenticated. The SDP carries the DTLS certificate fingerprint, so the signalling channel ties the keys to the participants.
-5. **Transport**: UDP on the ICE-selected candidate pair. RTP and RTCP are multiplexed on one port (rtcp-mux), and all tracks share one 5-tuple (BUNDLE).
-6. **Feedback**: RTCP receiver reports (loss fraction, jitter, used to compute RTT), NACK (retransmit request), PLI (ask for a keyframe), and transport-wide congestion control feedback (per-packet arrival times).
-7. **Receive**: The jitter buffer reorders packets and absorbs delay variation. Opus PLC/FEC conceals lost audio. Video freezes until a keyframe arrives if a frame cannot be decoded.
+## Packet demultiplexing on one UDP port (RFC 7983)
 
-## Topology: full mesh
+Every datagram arrives on the same socket. The first bytes decide what it is:
 
-Each participant opens one `RTCPeerConnection` per other participant.
-
-| Participants | Links in call | Uplink streams per person |
+| First byte | Second byte | Meaning |
 |---|---|---|
-| 2 | 1 | 1 |
-| 3 | 3 | 2 |
-| 4 | 6 | 3 |
+| 0–3 and magic cookie `0x2112A442` at offset 4 | — | STUN (NAT discovery, connectivity checks, keepalive) |
+| 128–191 | 200–206 | RTCP (SR, RR, NACK, PLI) |
+| 128–191 | other | RTP: PT 96 = VP8, PT 97 = VP8 retransmission, PT 111 = Opus |
 
-Mesh needs no media server, gives the lowest latency (one hop), and keeps end-to-end encryption. Its cost is uplink: each person encodes and sends N−1 copies. At 4 people with about 1 Mbit/s video that is about 3 Mbit/s up, which is why the cap is 4. Alternatives:
+The source address then identifies which peer the packet came from.
 
-- **SFU** (Selective Forwarding Unit): each client sends one stream to a server, which forwards it to the others. Uplink stays constant. Needs a server on the media path. Used by Google Meet and Zoom.
-- **MCU**: the server decodes, mixes and re-encodes. Lowest client load, highest server cost and latency.
+## NAT traversal (simplified ICE)
 
-## NAT traversal (ICE + STUN)
+1. **Gather**: the host candidate is the LAN IP plus our UDP port. The **srflx** candidate comes from sending a STUN Binding request to the STUN server and reading `XOR-MAPPED-ADDRESS`, our public IP:port as seen from outside our NAT.
+2. **Exchange**: `CAND <peer> <type> <ip> <port>` lines through the signalling server.
+3. **Check**: both peers send STUN Binding requests to every candidate of the other every 100 ms, with `USERNAME "<their-id>:<my-id>"`. Our outgoing packet opens a mapping in our own NAT, so the other side's packets can come back in. This is **UDP hole punching**. A request from an unknown address is added as a **prflx** (peer-reflexive) candidate.
+4. **Select**: the first candidate that answers becomes the media address. The UI and CSV show the pair, for example `srflx->srflx`.
+5. **Keepalive**: a Binding request every 2.5 s keeps NAT mappings from expiring.
+6. **Failure**: if nothing answers within 15 s, the client reports that both sides are probably behind symmetric NAT and a TURN relay would be needed (out of scope).
 
-Each browser collects candidate addresses:
-
-- **host**: its own interface IP (for example `192.168.1.5:54321`).
-- **srflx** (server-reflexive): the public IP:port its NAT assigned, learned by sending a STUN Binding Request to the STUN server and reading `XOR-MAPPED-ADDRESS` from the reply.
-- **relay**: an address on a TURN server. Not used here. TURN is the fallback when both sides are behind symmetric NAT.
-
-Candidates are exchanged over signalling. ICE then runs STUN connectivity checks on every candidate pair, sending packets in both directions at the same time. This "hole punching" opens mappings on both NATs. The best working pair is nominated. The stats overlay shows the chosen pair as `local-type->remote-type` (for example `srflx->srflx` across two networks, `host->host` on one LAN).
-
-**Limit**: a symmetric NAT gives a different public port for each destination, so the port learned from STUN does not match the one the peer sees. Two symmetric NATs, or one symmetric and one port-restricted, cannot connect without TURN. Mobile carrier NAT (CGNAT) is often symmetric. This is recorded as an expected failure case in EVALUATION.md.
-
-## Quality adaptation (two layers)
-
-1. **Built in (browser)**: Google Congestion Control (GCC). It estimates available bandwidth from transport-wide feedback (delay-gradient based) and from loss, and sets the encoder target bitrate. Its estimate appears as `availableOutgoingBitrate`. When bitrate drops, the encoder lowers resolution or fps on its own (`qualityLimitationReason = bandwidth`).
-2. **Ours**: `client/adapt.js`, an AIMD controller per outgoing video stream. It reads receiver-reported loss and RTT once per second:
-   - loss > 8 % or RTT > 400 ms: drop **two** ladder levels (multiplicative decrease)
-   - 3 clean seconds in a row (loss < 2 %, RTT < 250 ms): climb **one** level (additive increase)
-   - Ladder: 1500k@1x, 900k@1x, 600k@1.5x, 350k@2x, 200k@3x, 120k@4x (max bitrate @ downscale factor)
-   - Applied with `RTCRtpSender.setParameters()` (`maxBitrate`, `scaleResolutionDownBy`).
-
-   Why add it on top of GCC: GCC mostly reacts to delay. Under *random* loss (Wi-Fi, not congestion) GCC keeps sending at a high rate, and every lost packet of a large frame breaks that frame. Our controller trades resolution for fewer packets per frame and fewer freezes. Under real congestion it backs off sooner. The evaluation compares adaptation on and off.
-
-## Security
-
-- Media: DTLS-SRTP is mandatory in WebRTC, so it is always encrypted end to end between browsers. In mesh, the server cannot decrypt media.
-- Signalling: should run over `wss://` (TLS) so that SDP, including the DTLS fingerprints, cannot be swapped by a man-in-the-middle. Use `scripts/gen-cert.sh` or a TLS tunnel.
-- The server validates every message (schema, size, room name) and relays only within a room, so a client cannot inject an offer into another room.
-- Not in scope: authentication or room passwords. Anyone who knows the room name can join.
-
-## Measurement pipeline
+## Media path
 
 ```
-getStats() every 1 s -> StatsSampler (per-interval deltas) -> rows
-  -> on-screen overlay
-  -> POST /api/stats every 5 s -> results/<run>.csv
-  -> analysis/plot.py -> summary.md + PNG graphs
+camera --FFmpeg--> I420 --libswscale--> ladder resolution --libvpx VP8 (CBR, realtime)--> frame
+frame --split into <=1160-byte payloads--> [RTP hdr | 1-byte descriptor (S,K) | VP8 data] --UDP--> each peer
+
+mic --FFmpeg--> PCM --libswresample--> 48 kHz mono --libopus (32 kbps, 20 ms, in-band FEC)--> [RTP hdr | Opus] --UDP-->
 ```
 
-Impairment runs (bench/run-matrix.js, inside WSL2):
+- **RTP header** (RFC 3550, 12 bytes): version 2, marker (last packet of a video frame), payload type, 16-bit sequence number, timestamp (90 kHz video, 48 kHz audio), SSRC.
+- **Video descriptor byte**: `S` marks the first packet of a frame, `K` marks a keyframe.
+- **MTU**: payloads are capped so IP packets stay around 1200 bytes, well under a 1500-byte Ethernet MTU. This avoids IP fragmentation, where losing one fragment loses the whole datagram.
+- **Mesh**: one encoder, and each RTP packet is sent to every connected peer (N−1 copies). The encoder runs at the level of the *worst* receiver. Simulcast or SVC would avoid that trade-off, and an SFU would avoid the uplink copies.
 
-```
- headless Chromium (bot A) <-- lo (tc netem: loss/delay/jitter/rate) --> headless Chromium (bot B)
-```
+## Receive side and loss repair
 
-Both bots run on one Linux host, so the media crosses the `lo` interface, where netem shapes it. They use Chromium's synthetic camera and mic, so the input is the same in every run.
+| Mechanism | How it works |
+|---|---|
+| **Sequence gap → NACK** | A jump in sequence numbers immediately puts the missing numbers on a NACK list. A generic NACK (RTCP 205/1, packet ID + 16-bit bitmask) is resent every 1.5×RTT, up to 4 tries. |
+| **Retransmission** | The sender keeps the last 1024 video packets. On NACK it resends them with **PT 97**, so the receiver can keep them out of loss and jitter statistics. Statistics then show network loss before repair, not after. |
+| **Video jitter buffer** | Packets go into a ring indexed by `seq % 1024`. A frame is decoded only when every packet from `S` to marker is present. If a hole is not filled within max(120 ms, 2.5×RTT + 30 ms), the frame is skipped. |
+| **PLI** | After a skip or a decode error, later frames reference missing data, so the receiver drops frames until a keyframe arrives and sends a PLI (RTCP 206/1) to request one (rate-limited to one per 300 ms). |
+| **Freeze count** | A gap between rendered frames longer than max(3×average, average + 150 ms), the same rule WebRTC's stats use. |
+| **Audio jitter buffer** | 60 ms target delay, one Opus frame per 20 ms. When a frame is lost, it is rebuilt from the **in-band FEC** in the next packet if that has arrived, otherwise Opus **PLC** extrapolates it. Playout jumps forward if the buffer grows, and restarts with more delay if packets keep arriving after their playout time (adaptive playout). |
+
+## RTCP and measurement
+
+Every second each client sends every peer a **Sender Report** (RTCP 200). It has our NTP-format time, RTP time, and packet and octet counts, plus one **report block** per stream received from that peer:
+
+- **fraction lost** (8-bit) and **cumulative lost** (24-bit), from expected vs received sequence numbers (RFC 3550 A.3)
+- **interarrival jitter** J += (|D| − J)/16, where D is the change in transit time (RFC 3550 6.4.1)
+- **LSR/DLSR**: middle 32 bits of the peer's last SR time, and how long we held it. The peer computes **RTT = now − LSR − DLSR**.
+
+Every second the client also writes one CSV row per stream (video/audio × in/out). The rows contain bitrate, loss, jitter, RTT, fps, resolution, freezes, audio concealment, controller level and candidate pair. The column layout matches the WebRTC v1 version, so `analysis/plot.py` works for both.
+
+## Rate control (`cc.c`)
+
+There is no browser underneath, so this is the only congestion control in the system. It is AIMD over a 6-level ladder:
+
+| Level | Bitrate | Resolution |
+|---|---|---|
+| 0 | 1200 kbps | 640×480 |
+| 1 | 800 kbps | 640×480 |
+| 2 | 500 kbps | 480×360 |
+| 3 | 300 kbps | 320×240 |
+| 4 | 180 kbps | 320×240 |
+| 5 | 100 kbps | 160×120 |
+
+- **Congestion**: loss > 8 %, or queuing delay (RTT − minimum RTT seen) > 120 ms. **Multiplicative decrease**: drop two levels.
+- **Clean**: loss < 2 % and queuing delay < 40 ms, three reports in a row. **Additive increase**: climb one level.
+- Bitrate changes are applied live (`vpx_codec_enc_config_set`). A resolution change restarts the encoder, which begins with a keyframe.
+- The queuing-delay signal is the delay-based part, the same idea as TCP Vegas/BBR and WebRTC's GCC. It backs off when a bottleneck queue starts filling, *before* packets are dropped. `--no-adapt` pins level 0 for comparison.
+
+## Security notes
+
+- The signalling server validates every line: length ≤ 512 bytes (the connection is dropped otherwise), names limited to `[A-Za-z0-9_-]{1,32}`, candidates parsed as IPv4:port, relay only within the sender's room, 4-person cap, and idle sockets closed after 20 s.
+- **Media is not encrypted** in this C version. WebRTC (v1) uses DTLS-SRTP. Adding SRTP (for example libsrtp, with keys exchanged over a TLS signalling channel) is the natural next step. This is listed as a limitation in VIVA_NOTES.
+- ICE checks carry the peer IDs in `USERNAME`, so a stray STUN packet cannot attach itself to a call. Without message integrity (ICE's HMAC), an on-path attacker could still spoof one.

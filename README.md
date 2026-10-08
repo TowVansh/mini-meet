@@ -1,58 +1,69 @@
 # Mini-Meet
 
-Video calls for 2–4 people, built on WebRTC, with a signalling server written for this project, NAT traversal through STUN, and call quality measured under emulated packet loss, jitter and bandwidth limits (tc netem).
+Video calls for 2–4 people, **written in C**, for Windows and Linux. It has its own signalling server and protocol, its own STUN client and server for NAT traversal, and RTP/RTCP media over raw UDP with jitter buffers, NACK retransmission, Opus FEC and an AIMD rate controller. Call quality was measured under emulated packet loss, jitter and bandwidth limits (tc netem).
 
-Course project 16, Computer Networks (CO4, CO5, Modules 4 and 5).
+Course project 16, Computer Networks (CO4, CO5; Modules 4 and 5).
 
 | Doc | What it covers |
 |---|---|
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Media path vs signalling path, mesh topology, ICE/STUN, adaptation, security |
-| [docs/PROTOCOL.md](docs/PROTOCOL.md) | Signalling protocol specification and sequence diagrams |
-| [docs/EVALUATION.md](docs/EVALUATION.md) | Impairment method, results, discussion |
-| [docs/NAT_DEMO.md](docs/NAT_DEMO.md) | How to run the cross-network STUN demo |
-| [docs/SYLLABUS_MAP.md](docs/SYLLABUS_MAP.md) | Which syllabus topics each part of the project covers |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Media path vs signalling path, threads, demultiplexing, ICE/STUN, loss repair, rate control |
+| [docs/PROTOCOL.md](docs/PROTOCOL.md) | Signalling protocol spec and the RTP/RTCP/STUN media profile |
+| [docs/EVALUATION.md](docs/EVALUATION.md) | Impairment method, results, comparison with the WebRTC prototype |
+| [docs/NAT_DEMO.md](docs/NAT_DEMO.md) | How to run a call across two different networks |
+| [docs/SYLLABUS_MAP.md](docs/SYLLABUS_MAP.md) | Which syllabus topics each part covers |
 | [docs/VIVA_NOTES.md](docs/VIVA_NOTES.md) | Likely viva questions with answers |
 
-## Quick start (Windows + WSL2 Ubuntu)
+## Build
 
+**Windows** (MSYS2, "MSYS2 MINGW64" shell):
 ```bash
-# inside WSL
-cd /mnt/e/MiniMeet
-npm install
-npm start                 # http://localhost:8443
+pacman -S --needed make mingw-w64-x86_64-{gcc,pkgconf,ffmpeg,SDL2,libvpx,opus}
+make            # bin/mm-server.exe, bin/mm-stun.exe, bin/mm.exe
+make test       # unit tests
+make dist       # copy DLLs into bin/ so it runs on PCs without MSYS2
 ```
 
-On Windows, open `http://localhost:8443` in two or more browser tabs (Chrome or Edge), use the same room name in each, and join. WSL2 forwards localhost, so Windows browsers can reach the server. Every remote tile shows live stats: candidate pair, RTT, bitrate, fps, loss, jitter, and the adaptation level.
-
-For other devices on the LAN, the page must be HTTPS, because browsers only allow camera access on secure origins. Run `bash scripts/gen-cert.sh`, restart the server, and open `https://<pc-ip>:8443`. For calls across different networks, see [docs/NAT_DEMO.md](docs/NAT_DEMO.md).
-
-## Tests
-
+**Linux / WSL** (Ubuntu):
 ```bash
-npm test     # signalling protocol integration tests (join, relay, room cap, validation, disconnect)
+sudo apt install build-essential pkg-config libavdevice-dev libavformat-dev libavcodec-dev \
+     libswscale-dev libswresample-dev libavutil-dev libsdl2-dev libvpx-dev libopus-dev
+make && make test
 ```
 
-## Impairment evaluation
+## Run a call
 
 ```bash
-# from Windows (tc needs root inside WSL)
-wsl -d Ubuntu -u root -- bash /mnt/e/MiniMeet/scripts/wsl-bench.sh
-# options: PROFILES="baseline loss5" ADAPT="0 1" DURATION=45 PEERS=2 TAG=eval
-
-# then
-python3 analysis/plot.py results/eval_*.csv   # writes results/summary.md + graphs
+bin/mm-server                                   # signalling server, TCP 9000
+bin/mm --server 127.0.0.1 --room demo --name Alice             # webcam + mic
+bin/mm --server 127.0.0.1 --room demo --name Bob --test        # test pattern + tone
 ```
 
-Run one profile by hand: `sudo scripts/impair.sh loss5` (list them with `scripts/impair.sh list`, remove with `sudo scripts/impair.sh clear`).
+Up to 4 clients per room. On another PC, use `--server <server-ip>`. Keys in the window: **M** mute, **V** camera off, **S** stats overlay, **Q** quit. Run `bin/mm --list-devices` to see cameras and microphones, then choose with `--video-dev "..." --audio-dev "..."`.
+
+Each remote tile shows the selected candidate pair (`host->host`, `srflx->srflx`), RTT, resolution, loss, jitter, freezes and the loss the other side reports. Add `--csv stats.csv` to log every second.
+
+Windows Firewall asks the first time `mm.exe` / `mm-server.exe` run. Allow both, and tick **public** networks too if you are on college Wi-Fi.
+
+## Evaluation
+
+```bash
+# from Windows; tc netem needs root inside WSL
+wsl -d Ubuntu -u root -- bash /mnt/e/MiniMeet/bench/run-matrix.sh
+python3 analysis/plot.py results/eval_*.csv     # summary.md + graphs in results/
+```
+
+`sudo scripts/impair.sh <profile>` applies a single impairment by hand (`scripts/impair.sh list` shows the profiles).
 
 ## Layout
 
 ```
-server/    signalling + static hosting + stats API (Node.js, express, ws)
-client/    browser app (WebRTC mesh, stats sampler, AIMD adapter)
-bench/     headless Chromium bots, impairment matrix runner
-scripts/   netem profiles, cert generator, WSL bench wrapper
-analysis/  summary + plots (pandas, matplotlib)
-docs/      architecture, protocol, evaluation, viva notes
-test/      server tests (node:test)
+src/common/   portable sockets (Winsock/POSIX), clock, signalling line protocol
+src/server/   mm-server
+src/stun/     STUN encode/decode + mm-stun server
+src/client/   mm: ICE, RTP/RTCP, jitter buffers, codecs, rate control, SDL UI
+tests/        unit tests (protocol parsing, STUN, RTP/RTCP, receiver stats, controller)
+bench/        netem impairment matrix
+analysis/     summary + plots
+results/      measurement data (results/v1 = WebRTC prototype)
+legacy-webrtc/ first prototype (browser WebRTC + Node.js), kept for comparison
 ```

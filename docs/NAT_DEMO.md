@@ -1,36 +1,48 @@
-# NAT Traversal Demo (STUN across separate networks)
+# NAT Traversal Demo (two different networks)
 
-Goal: show a call between two devices on **different networks**, where both are behind NAT, and the media path goes directly peer-to-peer using a server-reflexive (`srflx`) candidate learned through STUN.
+Goal: a call between two PCs on **different networks**, both behind NAT, where the media goes directly between them using the public addresses learned through STUN (`srflx`).
 
 ## Setup
 
-1. **Device 1**: laptop on college or home Wi-Fi, running the server (`npm start` in WSL).
-2. **Device 2**: a phone on **mobile data**, or a second laptop using the phone's hotspot. This must not be the same Wi-Fi.
-3. Make the signalling server reachable from the internet over HTTPS with a tunnel (no router changes needed):
-   ```bash
-   # inside WSL, second terminal
-   cloudflared tunnel --url http://localhost:8443
-   # prints https://<random>.trycloudflare.com
-   ```
-   (`ngrok http 8443` also works.) Only signalling and the web page go through the tunnel. **Media does not**, because the tunnel carries HTTP/WebSocket only and WebRTC media is UDP.
-4. Open the tunnel URL on both devices, join the same room.
+- **PC 1** (your laptop): college or home Wi-Fi. It runs the signalling server and a client.
+- **PC 2** (a teammate's laptop): a phone hotspot or home broadband, anything that is not the same network. It runs only `mm.exe`. On Windows it needs no install: unzip the release zip (`make dist` output, including DLLs).
+
+The signalling server has to be reachable from PC 2. Without access to the router, use a free raw-TCP tunnel:
+
+```bash
+bin/mm-server                    # on PC 1
+bore local 9000 --to bore.pub    # prints e.g. "listening at bore.pub:41234"
+```
+
+Only the signalling (TCP) goes through the tunnel. **Media does not**: it is UDP between the two PCs directly.
+
+## Run
+
+```bash
+# PC 1
+bin/mm --server 127.0.0.1 --room nat --name Laptop --csv nat-laptop.csv --run nat
+# PC 2
+mm.exe --server bore.pub:41234 --room nat --name Friend --csv nat-friend.csv --run nat
+```
 
 ## What to show
 
-- The tile overlay line `path srflx->srflx udp`, or `host->srflx` / `srflx->host` when one side has a public IP. This proves ICE picked a NAT-mapped address learned from STUN.
-- `chrome://webrtc-internals` (or `edge://webrtc-internals`): open the connection, find the **candidate-pair** with `nominated: true`, and show its local and remote candidates (type `srflx`, the public IP of each network).
-- Optional Wireshark capture on the laptop:
-  - filter `stun`: Binding Request to `stun.l.google.com:19302` and the reply carrying `XOR-MAPPED-ADDRESS` (the laptop's public IP:port).
-  - then STUN connectivity checks sent straight to the phone's public IP: this is the hole punching.
-  - filter `udp && !stun`: DTLS handshake followed by SRTP (RTP payloads are encrypted) flowing to the phone's public IP, **not** to the server.
+- Console: `srflx candidate <public-ip>:<port> (via STUN ...)` on both sides, then `CONNECTED via srflx->srflx`.
+- The stats overlay on the remote tile: `PATH SRFLX->SRFLX UDP`, RTT, loss.
+- Wireshark on PC 1:
+  - filter `stun`: the Binding request to the STUN server and the success reply with XOR-MAPPED-ADDRESS, then Binding requests sent straight to PC 2's public address. That is the hole punching.
+  - filter `rtp || rtcp` (Decode As → RTP for the UDP port): RTP to PC 2's public IP, **not** to the server.
+- The CSV `candidate_type` column.
 
 ## Expected failure case
 
-If both sides sit behind **symmetric NAT** (common on carrier-grade NAT for mobile data), the connection state goes to `failed` and the browser console logs `connection to <name> failed (NAT traversal without TURN?)`. The port STUN reported is not the port the peer actually sees, so hole punching cannot work. The fix is a TURN relay (for example coturn), which is outside the project scope (STUN only). Record which network pairs worked and which failed, and include that table in EVALUATION.md.
+If both sides are behind **symmetric NAT** (common on mobile carrier-grade NAT), no pair answers. After 15 s the client logs that a TURN relay would be needed, and the tile shows `ICE FAILED (NEEDS TURN)`. Record it as a result: it shows why TURN exists.
 
-| Device 1 network | Device 2 network | Selected pair | Result |
+## Results
+
+| PC 1 network | PC 2 network | Selected pair | Result |
 |---|---|---|---|
-| College Wi-Fi | Jio mobile data | | |
-| College Wi-Fi | Airtel hotspot | | |
-| Home Wi-Fi | Mobile data | | |
-| Same Wi-Fi (control) | Same Wi-Fi | host->host | |
+| Same PC, two clients (control) | — | host->host | Connected (RTT < 1 ms) |
+| | | | |
+
+The WebRTC prototype's run on 2026-10-07 (laptop on college Wi-Fi, phone on mobile data) connected `srflx->srflx`. It used the same STUN-and-hole-punching method, so those two NATs are known to be traversable.

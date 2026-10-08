@@ -2,7 +2,8 @@
 
     python3 analysis/plot.py results/<tag>_*.csv
 
-Run names follow <tag>_<profile>_adapt<0|1>_p<peers>. Writes into results/:
+Run names follow <tag>_<profile>_adapt<0|1>_p<peers>; each client writes its
+own file <run>__<name>.csv. Writes into results/:
     summary.csv, summary.md          one row per run
     bars_<metric>.png                adaptation off vs on, per profile
     timeline_<profile>.png           per-second traces for one profile
@@ -19,7 +20,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
 
 SKIP_SECONDS = 15  # ignore call setup + clean warm-up (impairment starts ~11 s in)
-RUN_RE = re.compile(r"_(?P<profile>[a-z0-9]+)_adapt(?P<adapt>[01])_p(?P<peers>\d)$")
+RUN_RE = re.compile(r"_(?P<profile>[a-z0-9]+)_adapt(?P<adapt>[01])_p(?P<peers>\d)(__|$)")
 OUT = Path(__file__).resolve().parent.parent / "results"
 
 

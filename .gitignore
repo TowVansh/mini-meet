@@ -1,5 +1,8 @@
-node_modules/
+bin/
 certs/
 results/*.log
 results/live-*.csv
+results/try_*
 analysis/__pycache__/
+node_modules/
+*.zip

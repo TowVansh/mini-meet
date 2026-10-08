@@ -1,67 +1,106 @@
 # Viva Notes
 
-**Why is signalling separate from media?**
-WebRTC deliberately leaves signalling undefined. The browser only produces and consumes SDP and ICE candidates. Any channel can carry them; we use WebSocket. Media then goes directly between peers. Keeping the two apart means the server handles a few KB per call, and calls keep running even if the server goes down.
+## Design
 
-**Why TCP for signalling and UDP for media?**
-Signalling must be complete and in order: a lost ICE candidate or a reordered answer breaks setup, so TCP fits. For media, a retransmitted packet that arrives after its playout time is useless. TCP's head-of-line blocking would stall every packet behind one loss. UDP lets the application decide: conceal the loss, send FEC, or NACK and retransmit only when there is still time.
+**What did you build?**
+A C program (`mm`) that makes 2–4 person audio/video calls over raw UDP, a C signalling server (`mm-server`), and a C STUN server (`mm-stun`). It builds on Windows (MinGW) and Linux. We wrote all of the networking ourselves: sockets, signalling protocol, STUN, hole punching, RTP/RTCP, jitter buffers, NACK, rate control. Libraries are used only for camera/mic capture (FFmpeg), codecs (libvpx, libopus) and the window (SDL2).
 
-**What is SDP?**
-Session Description Protocol: a text format describing codecs, payload types, SSRCs, ICE ufrag/password, the DTLS fingerprint, and the direction of each media section. An offer proposes; the answer selects from it.
+**Why are signalling and media separate?**
+Signalling is small and must be reliable and ordered, so it goes over TCP through a server. Media is large and time-critical and goes directly between peers over UDP. The server handles a few hundred bytes per call and cannot see media, and calls survive a server crash.
 
-**What is ICE?**
-Interactive Connectivity Establishment. It gathers candidates (host, srflx, relay), exchanges them through signalling, runs STUN connectivity checks on every candidate pair in both directions, and nominates the best pair that works.
+**Why TCP for signalling but UDP for media?**
+TCP retransmits until data arrives, in order. A lost video packet would block every packet behind it (head-of-line blocking) for a full retransmission round trip. For live media, data that arrives late is useless. UDP lets us choose per packet: retransmit if there is time (NACK), repair from redundancy (Opus FEC), or conceal (PLC, frame skip plus keyframe).
+
+**How do you make Windows and Linux share one codebase?**
+`src/common/net.c` hides the differences: `WSAStartup`/`closesocket`/`ioctlsocket(FIONBIO)`/`WSAGetLastError` on Windows, `close`/`fcntl(O_NONBLOCK)`/`errno` on Linux. `FD_SETSIZE` is raised on Windows (default 64). `SIO_UDP_CONNRESET` is disabled, otherwise Windows reports ICMP port-unreachable as a recv error on UDP. Threads and mutexes come from SDL.
+
+**Why does the server use select() rather than threads?**
+One thread, one `select()` over all sockets. There are no locks and no races, and it easily handles the scale needed (rooms of 4). It is the classic event-loop server pattern. epoll would scale further on Linux, but select works on both OSes.
+
+**How does TCP framing work in your protocol?**
+TCP has no message boundaries: one `recv` can return half a line or three lines. We buffer bytes and split on `\n` (`mm_linebuf_push/pop`). Lines over 512 bytes are rejected, so a client cannot exhaust server memory.
+
+## NAT traversal
+
+**What is NAT, and why is it a problem?**
+Many devices share one public IP. The NAT rewrites the source IP:port of outgoing packets and keeps a mapping. Unsolicited incoming packets have no mapping and are dropped, so two NATed peers cannot just send to each other.
 
 **How does STUN work?**
-The client sends a Binding Request over UDP. The server replies with `XOR-MAPPED-ADDRESS`, which is the source IP:port the server saw, meaning the client's address after NAT. That becomes the srflx candidate. The address is XORed so that NAT devices which rewrite IP addresses inside payloads (ALGs) do not corrupt it.
+We send a Binding request to the STUN server. It replies with the source IP:port it saw, in `XOR-MAPPED-ADDRESS`. That is our public mapping, the **srflx** candidate. The address is XORed with the magic cookie so that NAT "helpers" which rewrite IP addresses inside payloads do not corrupt it.
 
-**When does STUN fail? What is TURN?**
-Symmetric NAT creates a new mapping for each destination, so the port STUN reported is not the port the peer will see. TURN relays all media through a server with a public IP. It always works, but costs server bandwidth and adds latency.
+**What is hole punching?**
+Both peers learn each other's candidates through signalling, then send STUN checks to each other *at the same time*. A's outgoing packet to B's public address creates a mapping in A's NAT. When B's packet arrives, A's NAT treats it as a reply and lets it in. The same happens on B's side. We pick the first candidate that answers.
 
-**What NAT types are there?**
-Full cone, restricted cone, port-restricted cone, and symmetric. Hole punching works for all of them except symmetric combined with symmetric or with port-restricted.
+**When does it fail?**
+With **symmetric NAT**, which uses a different public port for each destination. The port the STUN server saw is not the port the peer will see, so checks to it never match. Two symmetric NATs, or symmetric plus port-restricted, need **TURN**, a relay server that forwards all media. TURN always works but costs server bandwidth and adds latency. We detect this case (15 s timeout) and report it.
 
-**Why mesh, and why cap it at 4?**
-Mesh needs no media server, gives one hop of latency, and keeps true end-to-end encryption. But each person uploads N−1 streams and runs N−1 encoders. At 4 people that is 3× uplink. Beyond that an SFU is the right design.
+**NAT types?**
+Full cone, restricted cone, port-restricted cone, and symmetric. Hole punching works for every combination except symmetric with symmetric or with port-restricted.
 
-**What is an SFU, and how is it different from an MCU?**
-An SFU forwards packets without decoding them; each client uploads one stream and downloads N−1 (often with simulcast layers). An MCU decodes, mixes and re-encodes into one stream, which is CPU-heavy and adds delay.
+**What are host, srflx and prflx candidates?**
+host = our own interface address (works on the same LAN). srflx = public address learned from STUN. prflx = an address we first learned because a peer's check arrived from it (it can differ from srflx if there is another NAT in the path).
 
-**How is media secured?**
-DTLS handshake on the media path. Each side's certificate fingerprint is in the SDP. SRTP keys are derived from the handshake, so every RTP packet is encrypted and authenticated. Encryption is mandatory in WebRTC. In mesh, the server cannot decrypt media.
+**Why keepalives?**
+NAT mappings for UDP expire after roughly 30 s to a few minutes of silence. We send a Binding request every 2.5 s, which keeps the hole open even when media is paused.
 
-**DTLS-SRTP vs IPsec?**
-IPsec secures IP packets at layer 3 between hosts or gateways and needs OS or network setup. DTLS-SRTP runs inside the application, per session and per peer, with no OS configuration, and crosses NAT easily because it rides on UDP.
+## Media
 
-**What is jitter, and how is it handled?**
-Variation in packet delay. The receiver's jitter buffer holds packets briefly and plays them at a steady rate. More jitter makes the buffer grow, which adds latency, and packets that arrive too late are treated as lost. Our measurements show this in the jitter30 and jitter60 profiles.
+**What is in your RTP packets?**
+A 12-byte RFC 3550 header: version, marker, payload type, sequence number, timestamp, SSRC. Video adds a 1-byte descriptor (start-of-frame and keyframe flags). Payloads are at most 1160 bytes, so a video frame is split across several packets and the marker flags the last one.
 
-**How is RTT measured?**
-RTCP: the sender records when it sent a Sender Report. The receiver's Receiver Report echoes that timestamp (LSR) along with how long it held the report (DLSR). RTT = now − LSR − DLSR. The ICE layer also measures RTT from STUN consent checks (`currentRoundTripTime`).
+**Why limit packet size?**
+To stay under the path MTU (1500 bytes on Ethernet, less on some links). Bigger datagrams get IP-fragmented, and losing any fragment loses the whole datagram. Fragments also often get dropped by NATs and firewalls.
 
-**What does your adaptation do, and how is it like TCP?**
-AIMD. On congestion signals (loss > 8 % or RTT > 400 ms) it cuts quality by two ladder levels at once (multiplicative decrease). After 3 clean seconds it raises quality by one level (additive increase). TCP Reno uses the same shape on its congestion window: it backs off fast so the network recovers, and probes slowly for more.
+**What do the sequence number and the timestamp each do?**
+The sequence number orders packets and reveals loss (gaps). The timestamp gives the media time (90 kHz video, 48 kHz audio): every packet of one video frame shares it, and jitter is computed from it.
 
-**What does the browser already do (GCC)?**
-Google Congestion Control. The receiver reports per-packet arrival times (transport-wide CC). The sender watches the delay gradient. Queues building up mean congestion before any loss happens, so it lowers its rate. It also uses loss: below 2 % it increases, above 10 % it decreases. Its output is the target bitrate (`availableOutgoingBitrate`).
+**How do you share one UDP port between STUN, RTP and RTCP?**
+By the first byte (RFC 7983). STUN has its top two bits 00 plus the magic cookie at offset 4. RTP/RTCP have version 2, so the first byte is 128–191. RTCP packet types 200–206 sit where RTP has marker+PT, and our RTP PTs (96, 97, 111) never fall in that range (RFC 5761).
 
-**Why add your own controller on top of GCC?**
-Random loss (for example Wi-Fi) is not congestion, so GCC keeps sending at a high bitrate. Large frames span many packets, and one lost packet breaks the whole frame, causing freezes and keyframe requests. Lowering resolution means fewer packets per frame and fewer broken frames. Compare adapt on vs off in EVALUATION.md.
+## Reliability and quality
 
-**How do you handle packet loss?**
-Audio: Opus in-band FEC plus packet loss concealment. Video: NACK retransmission when there is time, PLI keyframe requests when decoding breaks, plus our downscaling.
+**How do you detect loss?**
+By gaps in RTP sequence numbers (with 16-bit wrap handled by `seq_newer`). The receiver immediately sends a **NACK** for the missing numbers.
 
-**What is glare, and how did you avoid it?**
-Glare is when both peers send an offer at the same time. Our rule: only the newcomer offers, and existing members only answer. (The alternative is WebRTC's "perfect negotiation" pattern with rollback.)
+**Explain NACK.**
+RTCP Generic NACK (PT 205, FMT 1). Each entry holds a packet ID plus a 16-bit bitmask of which of the next 16 are also missing, so one entry can request 17 packets. The sender keeps the last 1024 video packets and resends them. We resend NACKs every 1.5×RTT, at most 4 times, and give up once the frame's deadline has passed. This is **selective-repeat ARQ with a deadline**.
 
-**Why queue ICE candidates?**
-Trickle ICE can deliver a candidate before `setRemoteDescription` has run. `addIceCandidate` would then fail, so candidates are held until the remote description is set.
+**Why send retransmissions with a different payload type?**
+So the receiver can keep them out of its loss and jitter statistics. RTCP then reports the *network's* loss rate, not loss after repair. That is what the rate controller needs, and the same idea as WebRTC's RTX stream.
 
-**How did you emulate the network?**
-Linux `tc qdisc ... netem` on the loopback interface inside WSL2. It can add random or bursty (Gilbert-Elliott) loss, fixed delay, normally distributed jitter, and a rate limit. Two headless Chromium bots with synthetic media run the call through it, so every run is repeatable.
+**What is a PLI?**
+Picture Loss Indication (PT 206, FMT 1). VP8 frames reference earlier frames. If a frame is lost for good, later frames would decode with errors. The receiver drops them and asks for a **keyframe**, which needs no references. This is why video "freezes" after heavy loss.
+
+**How do you handle audio loss?**
+Opus in-band **FEC**: each packet carries a low-bitrate copy of the previous frame. If frame N is lost but N+1 arrived, we decode N from N+1's FEC data. If both are missing, Opus **PLC** (packet loss concealment) extrapolates the sound. We tell the encoder the measured loss rate so it sizes the FEC.
+
+**What is jitter, and how does your jitter buffer work?**
+Jitter is variation in packet delay. Audio: we hold 60 ms (3 frames) and play one frame every 20 ms. If the buffer grows, we jump forward to cap latency. If packets keep arriving after their playout time, we restart with the delay rebuilt (adaptive playout). Video: we decode a frame once all its packets are present, waiting up to max(120 ms, 2.5×RTT) for retransmissions before skipping.
+
+**How is jitter measured?**
+RFC 3550: D = (arrival_j − arrival_i) − (ts_j − ts_i), and J += (|D| − J)/16 in RTP units, reported in RTCP. We divide by 90 (video) or 48 (audio) to get milliseconds.
+
+**How is RTT measured without synchronized clocks?**
+Our SR carries our time T1. The peer's next report echoes it (LSR) together with how long it held it (DLSR). When the report arrives at time T2: RTT = T2 − LSR − DLSR. Both T1 and T2 come from *our* clock, so the peer's clock never matters.
+
+**Explain your rate controller.**
+AIMD over a 6-level ladder from 1200 kbps @ 640×480 down to 100 kbps @ 160×120. On loss > 8 % *or* queuing delay > 120 ms we drop two levels (multiplicative decrease). After three clean reports in a row we climb one level (additive increase). That is the same shape as TCP Reno's congestion window. Queuing delay = RTT − smallest RTT seen. It rises as soon as a bottleneck queue starts filling, before any loss, which is the delay-based idea from TCP Vegas, BBR and WebRTC's GCC.
+
+**What did the experiments show?** See EVALUATION.md. Without adaptation, a 1 Mbit/s link fills netem's queue: RTT climbs to about 10 s, about 45 % of packets are lost, video stops (0 fps) and audio is completely concealed. With adaptation, the controller drops to about 300 kbps and the call stays smooth at 20 fps. Under pure random loss, the controller reacts too (it cannot tell random loss from congestion), giving up resolution that NACK could have protected. That is the classic weakness of loss-based control on wireless links.
+
+**Mesh vs SFU vs MCU?**
+Mesh: each client sends N−1 copies, with no media server, lowest latency and end-to-end delivery, but it caps out at about 4 people because of uplink. SFU: each client sends one stream to a server that forwards it (Meet, Zoom), so uplink stays constant. MCU: the server decodes, mixes and re-encodes, which needs the least client bandwidth but the most server CPU and adds delay. We encode once and send the same packets to every peer at the level of the worst receiver; simulcast or SVC would avoid that trade-off.
+
+## Security and limits
+
+**Is it secure?**
+The signalling server validates input (length, names, candidate syntax), relays only within a room, caps rooms, and closes idle connections. STUN checks carry peer IDs. **Media is not encrypted** in the C version. WebRTC (our v1 prototype) uses DTLS-SRTP. The fix would be SRTP with keys exchanged over TLS-protected signalling.
+
+**SRTP vs IPsec?**
+IPsec encrypts IP packets at layer 3 between hosts or gateways and needs OS or network configuration. SRTP encrypts only the RTP payload, per session, inside the application, and passes through NAT easily.
 
 **Limitations?**
-No TURN, so symmetric NAT fails. Mesh does not scale past about 4. The synthetic video is simpler than a real camera feed, so absolute bitrates are lower than a real call. netem on `lo` impairs both directions and all traffic. There is no authentication on rooms.
+No TURN (symmetric NAT fails), no media encryption, mesh only (up to 4), one encoder for all peers, IPv4 only, and the test pattern is not a real camera feed (the bench uses it so runs are repeatable). netem on `lo` impairs both directions at once.
 
-**Why can't IP multicast carry the conference?**
-Multicast is not routed across the public internet (ISPs do not enable inter-domain multicast). So conferencing uses application-level fan-out: mesh or SFU.
+**Why not IP multicast for the conference?**
+Multicast is not routed across the public internet, so fan-out happens at the application layer: mesh or SFU.
