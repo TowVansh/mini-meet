@@ -1,0 +1,80 @@
+04:15:12 [ice] host candidate 10.10.0.2:42929
+04:15:12 [sig] connected to 10.10.0.1:9300
+04:15:12 [sig] joined room b-rate1m-1 as botB (id eceafb84), 1 already here
+04:15:12 [ice] botA: remote host candidate 10.10.0.1:44877
+04:15:12 [crypto] botA: end-to-end keys ready, safety code 3035-F123 (compare on both screens)
+04:15:12 [ice] botA: CONNECTED via host->host, media to 10.10.0.1:44877 (9 ms)
+04:15:13 [stats] botA     host->host rtt   -1ms | in v  289kbps 19fps 320x240 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  284kbps lvl 3
+04:15:13 [cc] botA reported loss 0.0% rtt 0 ms -> encoder level 2 (500 kbps 480x360)
+04:15:14 [stats] botA     host->host rtt    0ms | in v  462kbps 20fps 480x360 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  469kbps lvl 2
+04:15:14 [cc] botA reported loss 0.0% rtt 0 ms -> encoder level 1 (800 kbps 640x480)
+04:15:15 [stats] botA     host->host rtt    0ms | in v  741kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  719kbps lvl 1
+04:15:15 [cc] botA reported loss 0.0% rtt 0 ms -> encoder level 0 (1200 kbps 640x480)
+04:15:16 [stats] botA     host->host rtt    0ms | in v 1031kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1017kbps lvl 0
+04:15:17 [stats] botA     host->host rtt    1ms | in v 1269kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1161kbps lvl 0
+04:15:18 [stats] botA     host->host rtt    0ms | in v 1260kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1219kbps lvl 0
+04:15:19 [stats] botA     host->host rtt    0ms | in v 1210kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1201kbps lvl 0
+04:15:20 [stats] botA     host->host rtt    0ms | in v 1219kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1154kbps lvl 0
+04:15:21 [stats] botA     host->host rtt    0ms | in v 1259kbps 20fps 640x480 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1168kbps lvl 0
+04:15:22 [stats] botA     host->host rtt    0ms | in v 1224kbps 19fps 640x480 loss  0.0% jit   2ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1209kbps lvl 0
+04:15:23 [stats] botA     host->host rtt   81ms | in v  918kbps 15fps 640x480 loss  0.0% jit  13ms frz 0 nack 0 rtx 0 | a conceal 52.3% fec 0 | out 1257kbps lvl 0
+04:15:24 [stats] botA     host->host rtt  404ms | in v  926kbps 16fps 640x480 loss  0.0% jit  12ms frz 0 nack 0 rtx 0 | a conceal 46.7% fec 0 | out 1234kbps lvl 0
+04:15:25 [cc] botA reported loss 0.0% rtt 1057 ms -> encoder level 2 (500 kbps 480x360)
+04:15:25 [stats] botA     host->host rtt 1057ms | in v  929kbps 15fps 640x480 loss  0.0% jit  14ms frz 0 nack 0 rtx 0 | a conceal 47.8% fec 0 | out  983kbps lvl 2
+04:15:26 [cc] botA reported loss 0.0% rtt 1588 ms -> encoder level 4 (180 kbps 320x240)
+04:15:26 [stats] botA     host->host rtt 1588ms | in v  918kbps 21fps 480x360 loss  0.0% jit  18ms frz 0 nack 0 rtx 0 | a conceal 26.1% fec 0 | out  482kbps lvl 4
+04:15:26 [cc] botA reported loss 0.0% rtt 1150 ms -> encoder level 5 (100 kbps 160x120)
+04:15:27 [stats] botA     host->host rtt 1150ms | in v  436kbps 34fps 160x120 loss  0.0% jit  14ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  154kbps lvl 5
+04:15:28 [stats] botA     host->host rtt    3ms | in v   99kbps 20fps 160x120 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  122kbps lvl 5
+04:15:29 [stats] botA     host->host rtt    3ms | in v   97kbps 20fps 160x120 loss  0.0% jit   2ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  129kbps lvl 5
+04:15:30 [stats] botA     host->host rtt    3ms | in v  106kbps 20fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  125kbps lvl 5
+04:15:31 [stats] botA     host->host rtt    3ms | in v  106kbps 20fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  129kbps lvl 5
+04:15:32 [stats] botA     host->host rtt    3ms | in v  113kbps 21fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  132kbps lvl 5
+04:15:33 [stats] botA     host->host rtt    3ms | in v   98kbps 20fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  129kbps lvl 5
+04:15:34 [stats] botA     host->host rtt    4ms | in v  106kbps 20fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  119kbps lvl 5
+04:15:34 [cc] botA reported loss 0.0% rtt 5 ms -> encoder level 4 (180 kbps 320x240)
+04:15:35 [stats] botA     host->host rtt    5ms | in v  106kbps 20fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  210kbps lvl 4
+04:15:36 [stats] botA     host->host rtt    3ms | in v  207kbps 19fps 320x240 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  214kbps lvl 4
+04:15:37 [stats] botA     host->host rtt    3ms | in v  181kbps 20fps 320x240 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  221kbps lvl 4
+04:15:37 [cc] botA reported loss 0.0% rtt 3 ms -> encoder level 3 (300 kbps 320x240)
+04:15:38 [stats] botA     host->host rtt    3ms | in v  197kbps 20fps 320x240 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  308kbps lvl 3
+04:15:39 [stats] botA     host->host rtt    4ms | in v  286kbps 20fps 320x240 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  326kbps lvl 3
+04:15:40 [stats] botA     host->host rtt    5ms | in v  300kbps 20fps 320x240 loss  0.0% jit   6ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  332kbps lvl 3
+04:15:40 [cc] botA reported loss 0.0% rtt 3 ms -> encoder level 2 (500 kbps 480x360)
+04:15:41 [stats] botA     host->host rtt    3ms | in v  304kbps 20fps 320x240 loss  0.0% jit   6ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  497kbps lvl 2
+04:15:42 [stats] botA     host->host rtt    3ms | in v  449kbps 20fps 480x360 loss  0.0% jit  10ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  516kbps lvl 2
+04:15:43 [stats] botA     host->host rtt   35ms | in v  519kbps 20fps 480x360 loss  0.0% jit  11ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  531kbps lvl 2
+04:15:43 [cc] botA reported loss 0.0% rtt 25 ms -> encoder level 1 (800 kbps 640x480)
+04:15:44 [stats] botA     host->host rtt   25ms | in v  505kbps 20fps 480x360 loss  0.0% jit  11ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  778kbps lvl 1
+04:15:45 [stats] botA     host->host rtt   26ms | in v  720kbps 20fps 640x480 loss  0.0% jit  12ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  818kbps lvl 1
+04:15:46 [stats] botA     host->host rtt   60ms | in v  802kbps 20fps 640x480 loss  0.0% jit  13ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  830kbps lvl 1
+04:15:46 [cc] botA reported loss 0.0% rtt 58 ms -> encoder level 0 (1200 kbps 640x480)
+04:15:47 [stats] botA     host->host rtt   58ms | in v  836kbps 20fps 640x480 loss  0.0% jit  13ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1035kbps lvl 0
+04:15:48 [stats] botA     host->host rtt   57ms | in v  823kbps 20fps 640x480 loss  0.0% jit  12ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1294kbps lvl 0
+04:15:49 [stats] botA     host->host rtt  191ms | in v  611kbps 20fps 320x240 loss  0.0% jit   8ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out 1266kbps lvl 0
+04:15:49 [cc] botA reported loss 0.0% rtt 554 ms -> encoder level 2 (500 kbps 480x360)
+04:15:50 [stats] botA     host->host rtt  554ms | in v  279kbps 21fps 160x120 loss  0.0% jit   6ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  493kbps lvl 2
+04:15:50 [cc] botA reported loss 0.0% rtt 909 ms -> encoder level 4 (180 kbps 320x240)
+04:15:51 [stats] botA     host->host rtt  909ms | in v   94kbps 20fps 160x120 loss  0.0% jit   2ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  208kbps lvl 4
+04:15:51 [cc] botA reported loss 0.0% rtt 3 ms -> encoder level 5 (100 kbps 160x120)
+04:15:52 [stats] botA     host->host rtt    3ms | in v  100kbps 20fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  125kbps lvl 5
+04:15:53 [stats] botA     host->host rtt    4ms | in v  109kbps 20fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  124kbps lvl 5
+04:15:54 [stats] botA     host->host rtt    3ms | in v   97kbps 20fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  132kbps lvl 5
+04:15:55 [stats] botA     host->host rtt    3ms | in v  107kbps 20fps 160x120 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  123kbps lvl 5
+04:15:56 [stats] botA     host->host rtt    3ms | in v  105kbps 20fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  130kbps lvl 5
+04:15:57 [stats] botA     host->host rtt    3ms | in v  109kbps 20fps 160x120 loss  0.0% jit   0ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  130kbps lvl 5
+04:15:58 [stats] botA     host->host rtt    3ms | in v   99kbps 20fps 160x120 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  133kbps lvl 5
+04:15:58 [cc] botA reported loss 0.0% rtt 3 ms -> encoder level 4 (180 kbps 320x240)
+04:15:59 [stats] botA     host->host rtt    3ms | in v  181kbps 20fps 320x240 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  221kbps lvl 4
+04:16:00 [stats] botA     host->host rtt    3ms | in v  189kbps 20fps 320x240 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  201kbps lvl 4
+04:16:01 [stats] botA     host->host rtt    3ms | in v  191kbps 20fps 320x240 loss  0.0% jit   1ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  215kbps lvl 4
+04:16:01 [cc] botA reported loss 0.0% rtt 3 ms -> encoder level 3 (300 kbps 320x240)
+04:16:02 [stats] botA     host->host rtt    3ms | in v  294kbps 20fps 320x240 loss  0.0% jit   5ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  314kbps lvl 3
+04:16:03 [stats] botA     host->host rtt    3ms | in v  293kbps 20fps 320x240 loss  0.0% jit   6ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  324kbps lvl 3
+04:16:04 [stats] botA     host->host rtt    3ms | in v  301kbps 20fps 320x240 loss  0.0% jit   6ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  321kbps lvl 3
+04:16:04 [cc] botA reported loss 0.0% rtt 3 ms -> encoder level 2 (500 kbps 480x360)
+04:16:05 [stats] botA     host->host rtt    3ms | in v  459kbps 19fps 480x360 loss  0.0% jit  10ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  492kbps lvl 2
+04:16:06 [stats] botA     host->host rtt    4ms | in v  501kbps 20fps 480x360 loss  0.0% jit  11ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  534kbps lvl 2
+04:16:07 [stats] botA     host->host rtt   10ms | in v  510kbps 20fps 480x360 loss  0.0% jit  11ms frz 0 nack 0 rtx 0 | a conceal  0.0% fec 0 | out  526kbps lvl 2
+04:16:07 [cc] botA reported loss 0.0% rtt 8 ms -> encoder level 1 (800 kbps 640x480)
+04:16:08 [main] bye
