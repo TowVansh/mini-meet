@@ -111,6 +111,7 @@ typedef struct {
     double     rtt_ms;
     double     rloss_v, rjitter_v_ms, rloss_a, rjitter_a_ms;
     cc_state_t cc;
+    uint64_t   last_rr_ms, last_starve_ms;  /* feedback starvation detection */
 
     /* --- per-second counters (reset by stats tick) --- */
     uint64_t   rx_bytes_v, rx_bytes_a, tx_bytes_v, tx_bytes_a;

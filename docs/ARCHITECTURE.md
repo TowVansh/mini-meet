@@ -128,6 +128,9 @@ There is no browser underneath, so this is the only congestion control in the sy
 - **Clean**: loss < 2 % and queuing delay < 40 ms, three reports in a row. **Additive increase**: climb one level.
 - Bitrate changes are applied live (`vpx_codec_enc_config_set`). A resolution change restarts the encoder, which begins with a keyframe.
 - The queuing-delay signal is the delay-based part, the same idea as TCP Vegas/BBR and WebRTC's GCC. It backs off when a bottleneck queue starts filling, *before* packets are dropped. `--no-adapt` pins level 0 for comparison.
+- **Slow start**: a call starts at level 3 (300 kbps) and climbs one level per clean report until the first congestion signal, then switches to the slower AIMD rule. A thin link is never flooded at full rate before any feedback has arrived.
+- **Windowed baseline with a cap**: the minimum RTT is taken over the last 10 s (smoothed values), so a path that simply gets longer stops counting as a queue. The baseline can rise at most 250 ms above the best RTT ever seen, so a standing queue never becomes "normal".
+- **Feedback starvation**: if a peer's reports stop for 2.5 s, they are probably stuck behind our own media in the same full queue. The silence itself is treated as congestion, which cuts the reaction time from "when the late report finally arrives" (4–13 s in tests) to about 2.5 s.
 
 ## Security notes
 

@@ -13,7 +13,12 @@
  * Queuing delay = smoothed RTT - minimum smoothed RTT over the last 10 s. The
  * windowed minimum (as in BBR) lets the baseline move when the path itself
  * gets longer, so a constant extra delay is not mistaken for a growing queue,
- * while a queue that keeps filling still shows up. */
+ * while a queue that keeps filling still shows up. The baseline may sit at
+ * most CC_MAX_PATH_SHIFT above the best RTT ever seen, so a standing queue
+ * never becomes "normal".
+ * Feedback starvation (netloop.c check_feedback): if receiver reports stop
+ * for 2.5 s they are probably stuck in the same full queue, so the silence
+ * itself counts as a congestion signal. */
 #ifndef MM_CC_H
 #define MM_CC_H
 
@@ -27,6 +32,7 @@ typedef struct {
 #define CC_LEVELS 6
 #define CC_RTT_WINDOW 10
 #define CC_START_LEVEL 3     /* 300 kbps: start low, probe upward (slow start) */
+#define CC_MAX_PATH_SHIFT 250.0  /* ms a path may lengthen before extra delay counts as queue */
 extern const cc_level_t CC_LADDER[CC_LEVELS];
 
 typedef struct {
@@ -34,6 +40,7 @@ typedef struct {
     int      clean;
     int      startup;                       /* 1 until the first congestion signal */
     double   srtt_ms;                       /* EWMA of RTT, -1 = none yet */
+    double   min_ever_ms;                   /* lowest SRTT seen in the whole call */
     double   rtt_hist[CC_RTT_WINDOW];       /* one sample per report, ring */
     int      nhist, hist_pos;
 } cc_state_t;

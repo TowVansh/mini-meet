@@ -177,7 +177,9 @@ How to use this guide: go through the parts in order. For each topic, learn the 
 - Ours: on loss > 8 % or queuing delay > 120 ms, drop 2 levels. After 3 clean reports (loss < 2 %, queuing delay < 40 ms), climb 1 level.
 - Ladder: 1200k@640×480 → 800k → 500k@480×360 → 300k@320×240 → 180k → 100k@160×120.
 - **Delay-based**: queuing delay = smoothed RTT − minimum smoothed RTT over the last 10 s (the BBR/Vegas idea). It sees the queue filling **before** loss.
-- Windowed minimum: a path that just gets longer (+100 ms) becomes the new baseline after 10 s (bug found and fixed using the delay100 run).
+- Windowed minimum: a path that just gets longer (+100 ms) becomes the new baseline after 10 s (bug found using the delay100 run), but never more than 250 ms above the best RTT (else a full buffer would look normal).
+- Slow start: begins at 300 kbps and climbs one level per clean report until the first congestion signal.
+- Feedback starvation: reports overdue 2.5 s means they are stuck in the queue, so back off anyway.
 - Weakness: random loss looks like congestion, so the controller drops quality for nothing (loss5 result).
 - Q: Why decrease faster than increase? (Stability and fairness: the network recovers quickly, and spare capacity is probed slowly.) Q: Draw the sawtooth from the NAT demo log.
 
@@ -240,10 +242,10 @@ How to use this guide: go through the parts in order. For each topic, learn the 
 
 - 2 peers, clean: 1200 kbps, 640×480, 20 fps, RTT < 1 ms.
 - 4-peer mesh: all 12 streams at 640×480, 20 fps (each client uploads 3 copies, ~3.6 Mbit/s).
-- Random loss ≤ 5 %: NACK + FEC hide it (no freezes, 0.3 % audio concealed). At 20 % loss: 31 freezes.
-- **1 Mbit/s link without adaptation: RTT 10.4 s, 13 % loss, 29 % audio concealed (bufferbloat). With adaptation: 280 kbps, 20 fps, RTT 2.5 ms, 0 % loss.**
-- 500 kbit/s: fixed rate gives 0 fps and RTT 18 s. Adaptive gives 20 fps and RTT 23 ms.
-- Controller weaknesses: it over-reacts to random loss and jitter (thinks they mean congestion), and it is too slow at 250 kbit/s (feedback is stuck in the same queue; slow start would fix it).
+- Random loss ≤ 5 %: NACK + FEC hide it (no freezes, 0.3 % audio concealed). At 20 % loss: 39 freezes (15 with adaptation).
+- **1 Mbit/s link without adaptation: RTT 10.8 s, 14 % loss, 31 % audio concealed (bufferbloat). With adaptation: ~200 kbps, 20 fps, RTT 3 ms, 0 % loss.**
+- 500 kbit/s: fixed rate gives 0 fps and RTT 19 s. Adaptive gives 20 fps and RTT 16 ms. Combo: fixed 0 fps, adaptive 20 fps.
+- Controller weaknesses: over-reacts to random loss and jitter (thinks they mean congestion). At 250 kbit/s it reacts in 2.5 s (feedback starvation) but cannot drain netem's huge queue in time (bufferbloat needs AQM in the network).
 - Bug found by testing: without a windowed minimum RTT, a fixed +100 ms delay was treated as congestion forever.
 - Real NAT demo: college Wi-Fi ↔ mobile hotspot, `srflx->srflx`, RTT median 85 ms, spikes to 1.15 s on the hotspot uplink.
 

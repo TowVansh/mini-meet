@@ -96,6 +96,31 @@ static void send_reports(peer_t *p, uint64_t now_us) {
     send_rtcp_to(p, buf, n);
 }
 
+/* The encoder serves every peer, so it runs at the level of the worst one. */
+static void apply_cc(peer_t *p, const char *why) {
+    int j, worst = 0;
+    for (j = 0; j < MAX_PEERS; j++)
+        if (g.peers[j].used && g.peers[j].ice_state == ICE_CONNECTED && g.peers[j].cc.level > worst)
+            worst = g.peers[j].cc.level;
+    if (worst != g.enc_level) {
+        log_msg("cc", "%s %s loss %.1f%% rtt %.0f ms -> encoder level %d (%d kbps %dx%d)", p->name, why,
+                p->rloss_v * 100, p->rtt_ms, worst, CC_LADDER[worst].kbps, CC_LADDER[worst].width,
+                CC_LADDER[worst].height);
+        g.enc_level = worst;
+    }
+}
+
+/* Feedback starvation: reports normally arrive every second. When they stop,
+ * they are most likely stuck in the same full queue as our media, so treat
+ * the silence itself as congestion instead of waiting for the late report
+ * (which would arrive seconds after the queue filled). */
+static void check_feedback(peer_t *p, uint64_t now) {
+    if (!g.adapt || !p->last_rr_ms || now - p->last_rr_ms < 2500) return;
+    if (now - p->last_starve_ms < 1000) return;
+    p->last_starve_ms = now;
+    if (cc_on_report(&p->cc, 1.0, -1)) apply_cc(p, "reports overdue (feedback stuck in a queue?)");
+}
+
 static void on_rtcp(peer_t *p, const uint8_t *buf, size_t len, uint64_t now_us) {
     rtcp_info_t info;
     int i;
@@ -123,18 +148,8 @@ static void on_rtcp(peer_t *p, const uint8_t *buf, size_t len, uint64_t now_us) 
             }
             p->rloss_v = b->fraction_lost / 256.0;
             p->rjitter_v_ms = b->jitter / 90.0;
-            if (g.adapt && cc_on_report(&p->cc, p->rloss_v, p->rtt_ms)) {
-                int j, worst = 0;
-                for (j = 0; j < MAX_PEERS; j++)
-                    if (g.peers[j].used && g.peers[j].ice_state == ICE_CONNECTED && g.peers[j].cc.level > worst)
-                        worst = g.peers[j].cc.level;
-                if (worst != g.enc_level) {
-                    log_msg("cc", "%s reported loss %.1f%% rtt %.0f ms -> encoder level %d (%d kbps %dx%d)", p->name,
-                            p->rloss_v * 100, p->rtt_ms, worst, CC_LADDER[worst].kbps, CC_LADDER[worst].width,
-                            CC_LADDER[worst].height);
-                    g.enc_level = worst;
-                }
-            }
+            p->last_rr_ms = now_us / 1000;
+            if (g.adapt && cc_on_report(&p->cc, p->rloss_v, p->rtt_ms)) apply_cc(p, "reported");
         } else if (b->ssrc == g.assrc) {
             p->rloss_a = b->fraction_lost / 256.0;
             p->rjitter_a_ms = b->jitter / 48.0;
@@ -295,7 +310,10 @@ static int net_thread(void *arg) {
         if (now - last_rtcp >= 1000) {
             last_rtcp = now;
             for (i = 0; i < MAX_PEERS; i++)
-                if (g.peers[i].used && g.peers[i].ice_state == ICE_CONNECTED) send_reports(&g.peers[i], now_us());
+                if (g.peers[i].used && g.peers[i].ice_state == ICE_CONNECTED) {
+                    send_reports(&g.peers[i], now_us());
+                    check_feedback(&g.peers[i], now);
+                }
         }
         if (now - last_stats >= 1000) {
             double secs = (now - last_stats) / 1000.0;

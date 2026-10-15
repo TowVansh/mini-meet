@@ -149,6 +149,12 @@ static void test_cc(void) {
     for (i = 0; i < 10; i++) cc_on_report(&cc, 0.0, 1);
     for (i = 0; i < 30; i++) cc_on_report(&cc, 0.0, 200);
     CHECK(cc.level == 0);
+
+    /* ...but a standing multi-second queue must never become the new "normal". */
+    cc_init(&cc);
+    for (i = 0; i < 10; i++) cc_on_report(&cc, 0.0, 20);
+    for (i = 0; i < 40; i++) cc_on_report(&cc, 0.0, 3000);
+    CHECK(cc.level == CC_LEVELS - 1);
 }
 
 static void test_crypto(void) {

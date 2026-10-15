@@ -37,7 +37,7 @@ Open the file, jump to the line, explain the function. Grouped by the questions 
 |---|---|
 | RTP header write/parse | `src/client/rtp.c:7`, `:16` |
 | Splitting a video frame into packets (MTU) | `src/client/media_in.c:40` `send_video_frame` |
-| Demux STUN / RTCP / RTP on one port | `src/client/netloop.c:222` `on_udp` |
+| Demux STUN / RTCP / RTP on one port | `src/client/netloop.c:237` `on_udp` |
 | VP8 encoder setup (bitrate, keyframes) | `src/client/media_in.c:266` `venc_open` |
 | Opus with in-band FEC | `src/client/media_in.c:394` `audio_thread` |
 
@@ -57,16 +57,16 @@ Open the file, jump to the line, explain the function. Grouped by the questions 
 |---|---|
 | Loss % and jitter formula (RFC 3550) | `src/client/rtp.c:182` `rx_stats_update` (line 202: J += (\|D\|−J)/16), `:214` `rx_stats_block` |
 | Sender Report with report blocks | `src/client/rtp.c:56` `rtcp_write_sr` |
-| RTT = now − LSR − DLSR | `src/client/netloop.c:118` in `on_rtcp` |
-| Per-second CSV stats | `src/client/netloop.c:184` `stats_tick` |
+| RTT = now − LSR − DLSR | `src/client/netloop.c:143` in `on_rtcp` (line 124) |
+| Per-second CSV stats | `src/client/netloop.c:199` `stats_tick` |
 
 ## "Show me congestion control"
 | What | Where |
 |---|---|
-| AIMD + slow start + delay signal | `src/client/cc.c:37` `cc_on_report` |
-| Queuing delay = SRTT − windowed min | `src/client/cc.c:27` `cc_queuing_delay` |
+| AIMD + slow start + delay signal | `src/client/cc.c:42` `cc_on_report` |
+| Queuing delay = SRTT − windowed min | `src/client/cc.c:28` `cc_queuing_delay` |
 | Bitrate/resolution ladder | `src/client/cc.c` `CC_LADDER` |
-| Applying the level to the encoder (worst peer) | `src/client/netloop.c` `on_rtcp` (after `cc_on_report`) |
+| Applying the level to the encoder (worst peer) | `src/client/netloop.c` `apply_cc` + `check_feedback` (feedback starvation) |
 
 ## "Show me security"
 | What | Where |
@@ -74,12 +74,12 @@ Open the file, jump to the line, explain the function. Grouped by the questions 
 | X25519 key agreement + safety code | `src/client/crypto.c:30` `mmc_derive` |
 | Encrypt/decrypt RTP (header = associated data) | `src/client/crypto.c:60` `mmc_seal_rtp`, `:69` `mmc_open_rtp` |
 | Nonce construction | `src/client/crypto.c:52` `rtp_nonce` |
-| Dropping forged packets | `src/client/netloop.c:222` `on_udp` (AUTH-FAIL) |
+| Dropping forged packets | `src/client/netloop.c:237` `on_udp` (AUTH-FAIL) |
 | Server input validation | `src/common/proto.c` `mm_valid_name`, `mm_valid_key_hex`; `mm_server.c` 512-byte limit in `main` |
 
 ## "Does it work?" (run live)
 ```
-make test                                   # 66 unit-test checks: STUN, RTP/RTCP, stats math, AIMD, crypto, tamper
+make test                                   # 67 unit-test checks: STUN, RTP/RTCP, stats math, AIMD, crypto, tamper
 bin\mm-server.exe
 bin\mm.exe --server 127.0.0.1 --room demo --name A
 bin\mm.exe --server 127.0.0.1 --room demo --name B --test
