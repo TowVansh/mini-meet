@@ -11,6 +11,7 @@
  *   --no-stun            host candidates only (same machine / LAN)
  *   --no-adapt           fixed 1200 kbps, no AIMD quality control
  *   --no-encrypt         send media in the clear (for comparison / Wireshark)
+ *   --no-mirror          show video unflipped (F toggles mirroring in the window)
  *   --headless           no window and no playback (benchmarks)
  *   --csv PATH --run ID  write per-second stats
  *   --duration SECS      leave after SECS seconds
@@ -92,6 +93,7 @@ int main(int argc, char **argv) {
     g.encrypt = 1;
     g.mic_on = g.cam_on = 1;
     g.show_stats = 1;
+    g.mirror = 1;
     g.tcp = g.udp = SOCK_INVALID;
     snprintf(g.run, sizeof g.run, "live");
 
@@ -105,6 +107,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--no-stun")) g.use_stun = 0;
         else if (!strcmp(a, "--no-adapt")) g.adapt = 0;
         else if (!strcmp(a, "--no-encrypt")) g.encrypt = 0;
+        else if (!strcmp(a, "--no-mirror")) g.mirror = 0;
         else if (!strcmp(a, "--headless")) g.headless = 1;
         else if (!strcmp(a, "--test")) g.test_source = 1;
         else if (!strcmp(a, "--file")) snprintf(g.file_src, sizeof g.file_src, "%s", NEXT());

@@ -170,6 +170,7 @@ typedef struct {
 
     FILE      *csv;
     int        show_stats;
+    int        mirror;          /* flip every tile horizontally on screen */
     uint64_t   start_ms;
 } app_t;
 

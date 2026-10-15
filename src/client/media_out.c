@@ -457,7 +457,8 @@ static void draw_tile(SDL_Renderer *r, tile_tex_t *t, SDL_Rect cell, const char 
             dst.w = (int)(cell.h * sa);
             dst.x = cell.x + (cell.w - dst.w) / 2;
         }
-        SDL_RenderCopy(r, t->tex, NULL, &dst);
+        /* Mirror is display-only: the video itself is sent unflipped. */
+        SDL_RenderCopyEx(r, t->tex, NULL, &dst, 0, NULL, g.mirror ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
     }
     box.x = cell.x + 8;
     box.y = cell.y + cell.h - 26;
@@ -514,6 +515,7 @@ void window_run(void) {
                 case SDLK_m: g.mic_on = !g.mic_on; log_msg("ui", "mic %s", g.mic_on ? "on" : "muted"); break;
                 case SDLK_v: g.cam_on = !g.cam_on; log_msg("ui", "camera %s", g.cam_on ? "on" : "off"); break;
                 case SDLK_s: g.show_stats = !g.show_stats; break;
+                case SDLK_f: g.mirror = !g.mirror; break;
                 default: break;
                 }
             }
@@ -581,7 +583,7 @@ void window_run(void) {
             draw_tile(r, &peer_t_[idx[k]], cells[k + 1], p->name, lines, nl);
         }
         SDL_SetRenderDrawColor(r, 160, 170, 180, 255);
-        font_draw(r, 10, wh - 22, 2, "M MUTE   V CAMERA   S STATS   Q QUIT");
+        font_draw(r, 10, wh - 22, 2, "M MUTE   V CAMERA   S STATS   F MIRROR   Q QUIT");
         SDL_RenderPresent(r);
         SDL_Delay(15);
     }
