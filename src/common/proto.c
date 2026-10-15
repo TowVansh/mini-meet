@@ -29,6 +29,15 @@ int mm_valid_cand_type(const char *s) {
     return strcmp(s, "host") == 0 || strcmp(s, "srflx") == 0;
 }
 
+int mm_valid_key_hex(const char *s) {
+    size_t n = 0;
+    for (; *s; s++, n++) {
+        char c = *s;
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) return 0;
+    }
+    return n == 64;
+}
+
 int mm_linebuf_push(mm_linebuf_t *lb, const char *data, size_t n) {
     if (lb->len + n > sizeof lb->buf) return -1;
     memcpy(lb->buf + lb->len, data, n);

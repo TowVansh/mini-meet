@@ -57,6 +57,30 @@ peer_t *peer_by_addr(const endpoint_t *ep) {
     return NULL;
 }
 
+/* ---- sending (encryption applied here) ---- */
+
+/* Media flows to a peer only once ICE has a path and, with encryption on,
+ * the session keys exist. */
+int media_ready(const peer_t *p) {
+    return p->used && p->ice_state == ICE_CONNECTED && (!g.encrypt || p->crypto.ready);
+}
+
+void send_rtp_to(peer_t *p, const uint8_t *pkt, size_t len) {
+    uint8_t buf[PKT_MAX + 64];
+    if (len > PKT_MAX) return;
+    memcpy(buf, pkt, len);
+    if (g.encrypt && !(len = mmc_seal_rtp(&p->crypto, buf, len, sizeof buf))) return;
+    udp_send(g.udp, &p->sel, buf, len);
+}
+
+void send_rtcp_to(peer_t *p, const uint8_t *pkt, size_t len) {
+    uint8_t buf[PKT_MAX + 64];
+    if (len > PKT_MAX) return;
+    memcpy(buf, pkt, len);
+    if (g.encrypt && !(len = mmc_seal_rtcp(&p->crypto, buf, len, sizeof buf))) return;
+    udp_send(g.udp, &p->sel, buf, len);
+}
+
 /* ---- RTCP ---- */
 
 static void send_reports(peer_t *p, uint64_t now_us) {
@@ -69,7 +93,7 @@ static void send_reports(peer_t *p, uint64_t now_us) {
     SDL_LockMutex(g.lock);
     n = rtcp_write_sr(buf, g.vssrc, ntp_from_us(now_us), g.last_vts, g.vpackets, g.voctets, blocks, nb);
     SDL_UnlockMutex(g.lock);
-    udp_send(g.udp, &p->sel, buf, n);
+    send_rtcp_to(p, buf, n);
 }
 
 static void on_rtcp(peer_t *p, const uint8_t *buf, size_t len, uint64_t now_us) {
@@ -180,23 +204,26 @@ static void stats_tick(double secs) {
         csv_row(p, "audio", "out", aout, p->rloss_a * 100, p->rjitter_a_ms, -1, 0, 0, -1, -1);
 
         if (g.headless || (now_ms() / 1000) % 5 == 0)
-            log_msg("stats", "%-8s %s->%s rtt %4.0fms | in v %4.0fkbps %2.0ffps %dx%d loss %4.1f%% jit %3.0fms frz %d nack %d rtx %d | a conceal %4.1f%% fec %d | out %4.0fkbps lvl %d",
+            log_msg("stats", "%-8s %s->%s rtt %4.0fms | in v %4.0fkbps %2.0ffps %dx%d loss %4.1f%% jit %3.0fms frz %d nack %d rtx %d | a conceal %4.1f%% fec %d | out %4.0fkbps lvl %d%s",
                     p->name, p->ltype, p->rtype, p->rtt_ms, vin, p->frames_decoded / secs, p->disp_w, p->disp_h, lv,
-                    p->rxv.jitter / 90.0, p->freezes, p->nack_sent, p->rtx_recv, conc, p->afec, vout + aout, g.enc_level);
+                    p->rxv.jitter / 90.0, p->freezes, p->nack_sent, p->rtx_recv, conc, p->afec, vout + aout, g.enc_level,
+                    p->bad_auth ? " AUTH-FAIL" : "");
 
         p->rx_bytes_v = p->rx_bytes_a = p->tx_bytes_v = p->tx_bytes_a = 0;
         p->frames_decoded = p->nack_sent = p->rtx_recv = p->plis_sent = 0;
         p->aframes = p->aconcealed = p->afec = 0;
+        p->bad_auth = 0;
     }
     if (g.csv) fflush(g.csv);
 }
 
 /* ---- packet dispatch ---- */
 
-static void on_udp(const uint8_t *buf, size_t len, const endpoint_t *from, uint64_t now_us) {
+static void on_udp(uint8_t *buf, size_t len, const endpoint_t *from, uint64_t now_us) {
     peer_t *p;
     rtp_hdr_t h;
     int off;
+    size_t wire_len = len;
     /* Demultiplex by first byte (RFC 7983): 0-3 STUN, 128-191 RTP/RTCP. */
     if (stun_is_stun(buf, len)) {
         ice_on_stun(buf, len, from);
@@ -206,16 +233,26 @@ static void on_udp(const uint8_t *buf, size_t len, const endpoint_t *from, uint6
     if (!p) return;
     p->last_rx_ms = now_us / 1000;
     if (rtp_is_rtcp(buf, len)) {
+        if (g.encrypt && (!p->crypto.ready || !(len = mmc_open_rtcp(&p->crypto, buf, len)))) {
+            p->bad_auth++;
+            return;
+        }
         on_rtcp(p, buf, len, now_us);
+        return;
+    }
+    /* Decrypt and verify before anything else trusts the packet. */
+    if (g.encrypt && (!p->crypto.ready || !(len = mmc_open_rtp(&p->crypto, buf, len)))) {
+        p->bad_auth++;
         return;
     }
     off = rtp_parse_header(buf, len, &h);
     if (off < 0) return;
+    /* bitrate counts bytes as they were on the wire (including the auth tag) */
     if (h.pt == RTP_PT_VP8 || h.pt == RTP_PT_VP8_RTX) {
-        p->rx_bytes_v += len;
+        p->rx_bytes_v += wire_len;
         rx_video(p, &h, buf + off, len - (size_t)off, h.pt == RTP_PT_VP8_RTX, now_us);
     } else if (h.pt == RTP_PT_OPUS) {
-        p->rx_bytes_a += len;
+        p->rx_bytes_a += wire_len;
         rx_audio(p, &h, buf + off, len - (size_t)off, now_us);
     }
 }

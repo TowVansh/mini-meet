@@ -23,7 +23,7 @@ The project targets CO4 and CO5 (Modules 4 and 5). It also uses topics from Modu
 
 | Topic | Where |
 |---|---|
-| Security attacks, trust, threats | Server input validation, line-length limit (DoS), relay only within a room, USERNAME-checked STUN. Media encryption is listed as a limitation (ARCHITECTURE.md security notes). |
+| Security attacks, trust, threats | Server input validation, line-length limit (DoS), relay only within a room, USERNAME-checked STUN. **End-to-end media encryption**: X25519 key exchange + ChaCha20-Poly1305 AEAD on RTP/RTCP, safety code against MITM (`crypto.c`). |
 | IPsec (comparison) | VIVA_NOTES: IPsec at layer 3 vs SRTP at the application layer. |
 | Firewalls | NAT/firewall traversal with STUN hole punching. Windows Firewall rules for `mm.exe`. Symmetric NAT needs TURN. |
 | Telnet | The signalling protocol is plain text, so it can be driven by hand with `telnet server 9000`. |

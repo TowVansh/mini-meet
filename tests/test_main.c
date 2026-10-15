@@ -5,7 +5,9 @@
 #include "../src/stun/stun.h"
 #include "../src/client/rtp.h"
 #include "../src/client/cc.h"
+#include "../src/client/crypto.h"
 
+#include <sodium.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -132,7 +134,9 @@ static void test_cc(void) {
     cc_state_t cc;
     int i;
     cc_init(&cc);
-    CHECK(cc_on_report(&cc, 0.0, 20) == 0 && cc.level == 0);
+    CHECK(cc.level == CC_START_LEVEL);                          /* starts low (slow start) */
+    for (i = 0; i < CC_START_LEVEL; i++) cc_on_report(&cc, 0.0, 20);
+    CHECK(cc.level == 0);                                       /* startup: up one level per clean report */
     CHECK(cc_on_report(&cc, 0.15, 20) == 1 && cc.level == 2);   /* loss: drop two levels */
     for (i = 0; i < 3 && cc.level == 2; i++) cc_on_report(&cc, 0.0, 300);
     CHECK(cc.level == 4);                                       /* queue building (RTT 20 -> 300): drop again */
@@ -147,6 +151,59 @@ static void test_cc(void) {
     CHECK(cc.level == 0);
 }
 
+static void test_crypto(void) {
+    mm_crypto_t a, b;
+    uint8_t pkt[256], copy[256];
+    char pub[MMC_KEY_HEX + 1];
+    rtp_hdr_t h = {1, RTP_PT_VP8, 1000, 90000, 0x1234};
+    size_t n, sealed;
+    rtcp_info_t info;
+
+    /* The module holds one key pair per process, so derive against our own
+     * public key and make "a" the receiver of b's sending direction.
+     * (Two-party agreement itself is checked in test_key_agreement.) */
+    CHECK(mmc_init() == 0);
+    mmc_public_hex(pub);
+    CHECK(mmc_derive(&b, "bbbbbbbb", "aaaaaaaa", pub) == 0);
+    CHECK(mmc_derive(&b, "bbbbbbbb", "aaaaaaaa", "zz") != 0);  /* malformed key rejected */
+    a = b;
+    memcpy(a.rx, b.tx, 32);
+
+    n = rtp_write_header(pkt, &h);
+    memcpy(pkt + n, "hello video", 11);
+    n += 11;
+    memcpy(copy, pkt, n);
+    sealed = mmc_seal_rtp(&b, pkt, n, sizeof pkt);
+    CHECK(sealed == n + MMC_TAG_LEN);
+    CHECK(memcmp(pkt, copy, 12) == 0);                          /* header stays readable */
+    CHECK(memcmp(pkt + 12, copy + 12, 11) != 0);                /* payload is not */
+    CHECK(mmc_open_rtp(&a, pkt, sealed) == n && memcmp(pkt, copy, n) == 0);
+
+    sealed = mmc_seal_rtp(&b, pkt, n, sizeof pkt);
+    pkt[3] ^= 1;                                                /* tamper with the (clear) sequence number */
+    CHECK(mmc_open_rtp(&a, pkt, sealed) == 0);                  /* authentication catches it */
+
+    n = rtcp_write_pli(pkt, 1, 2);
+    sealed = mmc_seal_rtcp(&b, pkt, n, sizeof pkt);
+    CHECK(rtp_is_rtcp(pkt, sealed));                            /* still demultiplexes as RTCP */
+    CHECK(mmc_open_rtcp(&a, pkt, sealed) == n);
+    CHECK(rtcp_parse(pkt, n, &info) == 0 && info.pli == 1);
+
+    CHECK(b.safety[4] == '-' && strlen(b.safety) == 9);
+    CHECK(!mmc_valid_hex("xyz") && mmc_valid_hex(pub));
+    CHECK(mm_valid_key_hex(pub) && !mm_valid_key_hex("00"));
+}
+
+/* Full key agreement between two independent key pairs (libsodium directly). */
+static void test_key_agreement(void) {
+    uint8_t apk[32], ask[32], bpk[32], bsk[32], arx[32], atx[32], brx[32], btx[32];
+    crypto_kx_keypair(apk, ask);
+    crypto_kx_keypair(bpk, bsk);
+    CHECK(crypto_kx_client_session_keys(arx, atx, apk, ask, bpk) == 0);
+    CHECK(crypto_kx_server_session_keys(brx, btx, bpk, bsk, apk) == 0);
+    CHECK(memcmp(atx, brx, 32) == 0 && memcmp(btx, arx, 32) == 0);   /* both sides agree, per direction */
+}
+
 int main(void) {
     net_init();
     test_tokenize();
@@ -156,6 +213,8 @@ int main(void) {
     test_rtcp();
     test_rx_stats();
     test_cc();
+    test_crypto();
+    test_key_agreement();
     printf("%d checks, %d failed\n", checks, failures);
     return failures != 0;
 }

@@ -10,6 +10,7 @@
  *   --stun HOST[:PORT]   STUN server (default stun.l.google.com:19302)
  *   --no-stun            host candidates only (same machine / LAN)
  *   --no-adapt           fixed 1200 kbps, no AIMD quality control
+ *   --no-encrypt         send media in the clear (for comparison / Wireshark)
  *   --headless           no window and no playback (benchmarks)
  *   --csv PATH --run ID  write per-second stats
  *   --duration SECS      leave after SECS seconds
@@ -31,7 +32,7 @@ static void usage(void) {
     fprintf(stderr,
             "usage: mm --server HOST[:PORT] --room ROOM --name NAME [--test | --file PATH]\n"
             "          [--video-dev NAME] [--audio-dev NAME] [--stun HOST[:PORT] | --no-stun]\n"
-            "          [--no-adapt] [--headless] [--csv PATH --run ID] [--duration SECS] [--port N]\n"
+            "          [--no-adapt] [--no-encrypt] [--headless] [--csv PATH --run ID] [--duration SECS] [--port N]\n"
             "       mm --list-devices\n");
     exit(2);
 }
@@ -88,6 +89,7 @@ int main(int argc, char **argv) {
     g.stun_port = 19302;
     g.use_stun = 1;
     g.adapt = 1;
+    g.encrypt = 1;
     g.mic_on = g.cam_on = 1;
     g.show_stats = 1;
     g.tcp = g.udp = SOCK_INVALID;
@@ -102,6 +104,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--stun")) split_host_port(NEXT(), g.stun_host, sizeof g.stun_host, &g.stun_port);
         else if (!strcmp(a, "--no-stun")) g.use_stun = 0;
         else if (!strcmp(a, "--no-adapt")) g.adapt = 0;
+        else if (!strcmp(a, "--no-encrypt")) g.encrypt = 0;
         else if (!strcmp(a, "--headless")) g.headless = 1;
         else if (!strcmp(a, "--test")) g.test_source = 1;
         else if (!strcmp(a, "--file")) snprintf(g.file_src, sizeof g.file_src, "%s", NEXT());
@@ -123,6 +126,12 @@ int main(int argc, char **argv) {
     }
 
     if (net_init() != 0) return 1;
+    if (mmc_init() != 0) {
+        fprintf(stderr, "libsodium init failed\n");
+        return 1;
+    }
+    mmc_public_hex(g.pub_hex);
+    if (g.adapt) g.enc_level = CC_START_LEVEL;   /* start low and probe up, like TCP slow start */
     signal(SIGINT, on_signal);
     if (SDL_Init(g.headless ? SDL_INIT_TIMER : (SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) != 0) {
         fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());

@@ -16,8 +16,9 @@ const cc_level_t CC_LADDER[CC_LEVELS] = {
 #define CLEAN_ROUNDS 3
 
 void cc_init(cc_state_t *cc) {
-    cc->level = 0;
+    cc->level = CC_START_LEVEL;
     cc->clean = 0;
+    cc->startup = 1;
     cc->srtt_ms = -1;
     cc->nhist = 0;
     cc->hist_pos = 0;
@@ -50,8 +51,11 @@ int cc_on_report(cc_state_t *cc, double loss, double rtt_ms) {
         cc->level += 2;
         if (cc->level >= CC_LEVELS) cc->level = CC_LEVELS - 1;
         cc->clean = 0;
+        cc->startup = 0;
     } else if (loss < LOSS_OK && qdelay < QDELAY_OK) {
-        if (++cc->clean >= CLEAN_ROUNDS) {
+        /* Startup: climb one level per clean report until the first congestion
+         * signal (fast ramp like TCP slow start), then the slower AIMD rule. */
+        if (++cc->clean >= (cc->startup ? 1 : CLEAN_ROUNDS)) {
             if (cc->level > 0) cc->level--;
             cc->clean = 0;
         }

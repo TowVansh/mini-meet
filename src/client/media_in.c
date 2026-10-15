@@ -30,8 +30,8 @@ static void fanout(const uint8_t *pkt, size_t len, int video) {
     int i;
     for (i = 0; i < MAX_PEERS; i++) {
         peer_t *p = &g.peers[i];
-        if (!p->used || p->ice_state != ICE_CONNECTED) continue;
-        udp_send(g.udp, &p->sel, pkt, len);
+        if (!media_ready(p)) continue;
+        send_rtp_to(p, pkt, len);
         if (video) p->tx_bytes_v += len;
         else p->tx_bytes_a += len;
     }
@@ -79,7 +79,7 @@ int tx_resend(peer_t *p, uint16_t seq) {
         size_t len = g.txhist[slot].len;
         memcpy(pkt, g.txhist[slot].data, len);
         pkt[1] = (uint8_t)((pkt[1] & 0x80) | RTP_PT_VP8_RTX);  /* mark as retransmission */
-        udp_send(g.udp, &p->sel, pkt, len);
+        send_rtp_to(p, pkt, len);
         p->tx_bytes_v += len;
         ok = 1;
     }

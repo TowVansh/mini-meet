@@ -132,5 +132,11 @@ There is no browser underneath, so this is the only congestion control in the sy
 ## Security notes
 
 - The signalling server validates every line: length ≤ 512 bytes (the connection is dropped otherwise), names limited to `[A-Za-z0-9_-]{1,32}`, candidates parsed as IPv4:port, relay only within the sender's room, 4-person cap, and idle sockets closed after 20 s.
-- **Media is not encrypted** in this C version. WebRTC (v1) uses DTLS-SRTP. Adding SRTP (for example libsrtp, with keys exchanged over a TLS signalling channel) is the natural next step. This is listed as a limitation in VIVA_NOTES.
+- **End-to-end media encryption** (`src/client/crypto.c`, libsodium). This is an SRTP-style design:
+  - **Key agreement**: each client creates a fresh X25519 key pair at start-up and sends its public key to each peer (`KEY` line through the server). `crypto_kx` (X25519 Diffie-Hellman + BLAKE2b) gives both sides the same two 256-bit session keys, one per direction. The server only ever sees public keys, so it **cannot decrypt media**.
+  - **RTP**: the 12-byte header stays readable, because demultiplexing, sequence numbers and statistics need it. It is still **authenticated** as AEAD associated data. The payload is encrypted with **ChaCha20-Poly1305**, and a 16-byte tag is appended. Nonce = SSRC ‖ seq ‖ PT ‖ timestamp, which is unique per packet; a retransmission gets its own nonce through PT 97.
+  - **RTCP**: the first 8 bytes stay readable, the rest is encrypted, then the tag and a 4-byte index (like SRTCP).
+  - Tampered or forged packets fail the tag check and are dropped (counted as `AUTH-FAIL` in the log).
+  - **Man-in-the-middle**: a malicious server could swap public keys. Both users see a **safety code** (a hash of both public keys) on screen and can compare it, the same idea as Signal's safety numbers.
+  - `--no-encrypt` turns encryption off (for comparison, or to show RTP payloads in Wireshark).
 - ICE checks carry the peer IDs in `USERNAME`, so a stray STUN packet cannot attach itself to a call. Without message integrity (ICE's HMAC), an on-path attacker could still spoof one.

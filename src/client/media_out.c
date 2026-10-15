@@ -23,7 +23,7 @@ static void send_nack_pli(peer_t *p, const uint16_t *seqs, int n, int pli) {
         len += rtcp_write_pli(buf + len, g.vssrc, p->remote_vssrc);
         p->plis_sent++;
     }
-    if (len) udp_send(g.udp, &p->sel, buf, len);
+    if (len) send_rtcp_to(p, buf, len);
 }
 
 static void request_keyframe(peer_t *p, uint64_t now_us) {
@@ -560,17 +560,18 @@ void window_run(void) {
             snprintf(label, sizeof label, "%s (you)%s%s", g.name, g.mic_on ? "" : " MUTED", g.cam_on ? "" : " CAM OFF");
             snprintf(lines[0], 96, "SEND %d KBPS %dX%d LVL %d", CC_LADDER[g.enc_level].kbps,
                      CC_LADDER[g.enc_level].width, CC_LADDER[g.enc_level].height, g.enc_level);
-            snprintf(lines[1], 96, "ADAPT %s", g.adapt ? "ON" : "OFF");
+            snprintf(lines[1], 96, "ADAPT %s  E2E %s", g.adapt ? "ON" : "OFF", g.encrypt ? "ON" : "OFF");
             draw_tile(r, &self_t, cells[0], label, lines, 2);
         }
         for (k = 0; k < npeers; k++) {
             peer_t *p = &g.peers[idx[k]];
-            char lines[6][96];
+            char lines[8][96];
             int nl = 0;
             if (p->ice_state != ICE_CONNECTED) {
                 snprintf(lines[nl++], 96, p->ice_state == ICE_FAILED ? "ICE FAILED (NEEDS TURN)" : "CONNECTING...");
             } else {
                 snprintf(lines[nl++], 96, "PATH %s->%s UDP", p->ltype, p->rtype);
+                if (g.encrypt) snprintf(lines[nl++], 96, p->crypto.ready ? "E2E CHACHA20 CODE %s" : "E2E WAITING FOR KEY%s", p->crypto.safety);
                 snprintf(lines[nl++], 96, "RTT %.0f MS", p->rtt_ms < 0 ? 0 : p->rtt_ms);
                 snprintf(lines[nl++], 96, "V-IN %dX%d LOSS %.1f%%", p->disp_w, p->disp_h, p->lost_pct_v);
                 snprintf(lines[nl++], 96, "JITTER %.0f MS FREEZES %d", p->rxv.jitter / 90.0, p->freezes);

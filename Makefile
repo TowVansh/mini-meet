@@ -17,14 +17,15 @@ else
   GUI     :=
 endif
 
-PKGS        := sdl2 vpx opus libavdevice libavformat libavcodec libswscale libswresample libavutil
+PKGS        := sdl2 vpx opus libsodium libavdevice libavformat libavcodec libswscale libswresample libavutil
 MEDIA_CFLAGS := $(shell pkg-config --cflags $(PKGS))
 MEDIA_LIBS   := $(shell pkg-config --libs $(PKGS))
 
 COMMON := src/common/net.c src/common/util.c src/common/proto.c
 STUN   := src/stun/stun.c
 CLIENT := src/client/main.c src/client/netloop.c src/client/sig.c src/client/ice.c \
-          src/client/media_in.c src/client/media_out.c src/client/rtp.c src/client/cc.c src/client/font.c
+          src/client/media_in.c src/client/media_out.c src/client/rtp.c src/client/cc.c src/client/font.c \
+          src/client/crypto.c
 
 BINS := bin/mm-server$(EXE) bin/mm-stun$(EXE) bin/mm$(EXE)
 
@@ -42,8 +43,8 @@ bin/mm-stun$(EXE): src/stun/mm_stun.c $(STUN) $(COMMON) | bin
 bin/mm$(EXE): $(CLIENT) $(STUN) $(COMMON) src/client/*.h | bin
 	$(CC) $(CFLAGS) $(MEDIA_CFLAGS) -o $@ $(CLIENT) $(STUN) $(COMMON) $(MEDIA_LIBS) $(NETLIBS) -lm $(GUI)
 
-bin/test$(EXE): tests/test_main.c src/client/rtp.c src/client/cc.c $(STUN) $(COMMON) | bin
-	$(CC) $(CFLAGS) -o $@ $^ $(NETLIBS) -lm
+bin/test$(EXE): tests/test_main.c src/client/rtp.c src/client/cc.c src/client/crypto.c $(STUN) $(COMMON) | bin
+	$(CC) $(CFLAGS) $(shell pkg-config --cflags libsodium) -o $@ $^ $(shell pkg-config --libs libsodium) $(NETLIBS) -lm
 
 test: bin/test$(EXE)
 	./bin/test$(EXE)

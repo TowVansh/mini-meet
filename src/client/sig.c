@@ -66,6 +66,16 @@ static void on_line(char *line) {
         p = peer_find(m.argv[1]);
         if (!p) p = peer_add(m.argv[1], m.argv[1]);
         if (p && ep_parse(m.argv[3], m.argv[4], &ep) == 0) ice_add_remote(p, m.argv[2], &ep);
+    } else if (strcmp(m.argv[0], "KEY") == 0 && m.argc == 3) {
+        p = peer_find(m.argv[1]);
+        if (!p) p = peer_add(m.argv[1], m.argv[1]);
+        if (p && g.encrypt) {
+            if (mmc_derive(&p->crypto, g.self_id, p->id, m.argv[2]) == 0)
+                log_msg("crypto", "%s: end-to-end keys ready, safety code %s (compare on both screens)", p->name,
+                        p->crypto.safety);
+            else
+                log_msg("crypto", "%s: invalid public key", p->name);
+        }
     } else if (strcmp(m.argv[0], "ERROR") == 0) {
         char msg[MM_LINE_MAX] = "";
         for (i = 2; i < m.argc; i++) {

@@ -19,6 +19,7 @@
 #include "../common/proto.h"
 #include "rtp.h"
 #include "cc.h"
+#include "crypto.h"
 
 #define MAX_PEERS      (MM_MAX_ROOM - 1)
 #define MAX_CANDS      6
@@ -73,6 +74,10 @@ typedef struct {
     endpoint_t sel;             /* selected remote address for media */
     char       ltype[8], rtype[8];
     uint64_t   ice_start_ms, last_check_ms, last_rx_ms, last_keepalive_ms;
+
+    /* --- end-to-end encryption --- */
+    mm_crypto_t crypto;
+    int        bad_auth;        /* packets that failed decryption (per second) */
 
     /* --- receive side --- */
     rx_stats_t rxv, rxa;
@@ -135,6 +140,8 @@ typedef struct {
     char run[128];
     int  duration;              /* seconds, 0 = until quit */
     int  udp_port;
+    int  encrypt;               /* end-to-end media encryption (default on) */
+    char pub_hex[MMC_KEY_HEX + 1];
 
     /* runtime */
     volatile int running;
@@ -186,6 +193,9 @@ peer_t *peer_add(const char *id, const char *name);
 void    peer_remove(peer_t *p);
 peer_t *peer_by_addr(const endpoint_t *ep);
 SDL_Thread *net_thread_start(void);
+int     media_ready(const peer_t *p);
+void    send_rtp_to(peer_t *p, const uint8_t *pkt, size_t len);
+void    send_rtcp_to(peer_t *p, const uint8_t *pkt, size_t len);
 
 /* media_out.c */
 void  rx_video(peer_t *p, const rtp_hdr_t *h, const uint8_t *pl, size_t n, int rtx, uint64_t now_us);

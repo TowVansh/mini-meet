@@ -94,13 +94,25 @@ Mesh: each client sends N−1 copies, with no media server, lowest latency and e
 ## Security and limits
 
 **Is it secure?**
-The signalling server validates input (length, names, candidate syntax), relays only within a room, caps rooms, and closes idle connections. STUN checks carry peer IDs. **Media is not encrypted** in the C version. WebRTC (our v1 prototype) uses DTLS-SRTP. The fix would be SRTP with keys exchanged over TLS-protected signalling.
+Yes, media is **end-to-end encrypted**. Each client makes an X25519 key pair, and public keys are swapped through the server (`KEY` line). Diffie-Hellman then gives both peers the same per-direction session keys, which the server never learns. Every RTP payload is encrypted with **ChaCha20-Poly1305** (AEAD). The RTP header stays readable but is authenticated, so changing even the sequence number makes the packet fail and get dropped. RTCP is encrypted too. To stop a man-in-the-middle server from swapping keys, both screens show a **safety code** (a hash of both public keys) that the users can compare. The signalling server also validates all input, relays only within a room, caps rooms, and closes idle connections.
+
+**Why ChaCha20-Poly1305 and not AES?**
+Both are standard AEADs (TLS 1.3 offers both). ChaCha20 is fast in software on CPUs without AES hardware (phones) and is constant-time by design. AEAD = encryption + integrity in one step.
+
+**Why not encrypt the RTP header too?**
+The receiver needs the sequence number and timestamp before decrypting, to find the right packet and nonce. SRTP does the same: the header is authenticated, not encrypted.
+
+**What is the nonce, and why must it never repeat?**
+A per-packet number used once with the key. Reusing a nonce with the same key in a stream cipher leaks the XOR of the two plaintexts. Ours is built from SSRC + sequence number + payload type + timestamp, so every packet gets a different one.
+
+**What is forward secrecy here?**
+Key pairs are fresh every run and never stored, so a key stolen later cannot decrypt earlier calls.
 
 **SRTP vs IPsec?**
 IPsec encrypts IP packets at layer 3 between hosts or gateways and needs OS or network configuration. SRTP encrypts only the RTP payload, per session, inside the application, and passes through NAT easily.
 
 **Limitations?**
-No TURN (symmetric NAT fails), no media encryption, mesh only (up to 4), one encoder for all peers, IPv4 only, and the test pattern is not a real camera feed (the bench uses it so runs are repeatable). netem on `lo` impairs both directions at once.
+No TURN (symmetric NAT fails), no replay protection on media (SRTP keeps a replay window), the signalling channel itself is plain TCP (keys are protected by the safety code, not TLS), mesh only (up to 4), one encoder for all peers, IPv4 only, and the test pattern is not a real camera feed (the bench uses it so runs are repeatable). netem on `lo` impairs both directions at once.
 
 **Why not IP multicast for the conference?**
 Multicast is not routed across the public internet, so fan-out happens at the application layer: mesh or SFU.

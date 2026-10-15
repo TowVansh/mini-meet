@@ -7,6 +7,9 @@
  *                 -> multiplicative decrease: jump DOWN two levels
  *   clean       = loss < 2 %  and queuing delay < 40 ms, 3 reports in a row
  *                 -> additive increase: step UP one level
+ * Startup: begins at CC_START_LEVEL (300 kbps) and climbs one level per
+ * clean report until the first congestion signal, like TCP slow start, so a
+ * thin link is never flooded at full rate before any feedback has arrived.
  * Queuing delay = smoothed RTT - minimum smoothed RTT over the last 10 s. The
  * windowed minimum (as in BBR) lets the baseline move when the path itself
  * gets longer, so a constant extra delay is not mistaken for a growing queue,
@@ -23,11 +26,13 @@ typedef struct {
 
 #define CC_LEVELS 6
 #define CC_RTT_WINDOW 10
+#define CC_START_LEVEL 3     /* 300 kbps: start low, probe upward (slow start) */
 extern const cc_level_t CC_LADDER[CC_LEVELS];
 
 typedef struct {
     int      level;
     int      clean;
+    int      startup;                       /* 1 until the first congestion signal */
     double   srtt_ms;                       /* EWMA of RTT, -1 = none yet */
     double   rtt_hist[CC_RTT_WINDOW];       /* one sample per report, ring */
     int      nhist, hist_pos;

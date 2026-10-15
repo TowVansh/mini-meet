@@ -26,6 +26,7 @@ Mini-Meet uses two protocols: a **signalling protocol** over TCP between clients
 |---|---|
 | `JOIN <room> <name>` | Enter a room (once per connection) |
 | `CAND <to-id> <host\|srflx> <ipv4> <port>` | Send one of my network candidates to a peer in my room |
+| `KEY <to-id> <64 hex>` | My X25519 public key for end-to-end media encryption |
 | `LEAVE` | Leave the room. Closing the socket does the same. |
 | `PING` | Keep-alive, sent every 5 s |
 
@@ -37,6 +38,7 @@ Mini-Meet uses two protocols: a **signalling protocol** over TCP between clients
 | `PEER_JOINED <id> <name>` | Someone entered your room |
 | `PEER_LEFT <id>` | Someone left, disconnected, or timed out |
 | `CAND <from-id> <type> <ipv4> <port>` | A peer's candidate, relayed (`to` replaced by `from`) |
+| `KEY <from-id> <64 hex>` | A peer's public key, relayed. The server never sees a secret key, so it cannot decrypt media. |
 | `PONG` | Reply to `PING` |
 | `ERROR <code> <text>` | Request rejected |
 
@@ -109,3 +111,13 @@ STUN, RTP and RTCP share **one UDP socket**, demultiplexed by the first byte (RF
 | PLI (206, FMT 1) | When the decoder needs a keyframe | Media SSRC |
 
 **RTT** = arrival time of the report − LSR − DLSR, in units of 1/65536 s. The sender computes it from its own SR timestamps, so the two clocks never need to be synchronized.
+
+### Encryption (default on, `--no-encrypt` to disable)
+
+| Packet | Clear (authenticated) | Encrypted | Appended |
+|---|---|---|---|
+| RTP | 12-byte header | payload | 16-byte Poly1305 tag |
+| RTCP | first 8 bytes | rest of compound packet | 16-byte tag + 4-byte index |
+| STUN | everything | — | — |
+
+Keys come from X25519 (`KEY` lines), one per direction. AEAD = ChaCha20-Poly1305 (IETF). RTP nonce = SSRC ‖ seq ‖ PT ‖ timestamp ‖ 0x00. RTCP nonce = index ‖ 0… ‖ 0x01. Details: `src/client/crypto.h`.

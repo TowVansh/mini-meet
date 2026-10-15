@@ -1,6 +1,6 @@
 # Mini-Meet
 
-Video calls for 2–4 people, **written in C**, for Windows and Linux. It has its own signalling server and protocol, its own STUN client and server for NAT traversal, and RTP/RTCP media over raw UDP with jitter buffers, NACK retransmission, Opus FEC and an AIMD rate controller. Call quality was measured under emulated packet loss, jitter and bandwidth limits (tc netem).
+Video calls for 2–4 people, **written in C**, for Windows and Linux, with **end-to-end encrypted** media (X25519 + ChaCha20-Poly1305). It has its own signalling server and protocol, its own STUN client and server for NAT traversal, and RTP/RTCP media over raw UDP with jitter buffers, NACK retransmission, Opus FEC and an AIMD rate controller. Call quality was measured under emulated packet loss, jitter and bandwidth limits (tc netem).
 
 Course project 16, Computer Networks (CO4, CO5; Modules 4 and 5).
 
@@ -12,12 +12,14 @@ Course project 16, Computer Networks (CO4, CO5; Modules 4 and 5).
 | [docs/NAT_DEMO.md](docs/NAT_DEMO.md) | How to run a call across two different networks |
 | [docs/SYLLABUS_MAP.md](docs/SYLLABUS_MAP.md) | Which syllabus topics each part covers |
 | [docs/VIVA_NOTES.md](docs/VIVA_NOTES.md) | Likely viva questions with answers |
+| [docs/CODE_TOUR.md](docs/CODE_TOUR.md) | Which file and function to open for each review question |
+| [docs/STUDY.md](docs/STUDY.md) | Syllabus-ordered study guide |
 
 ## Build
 
 **Windows** (MSYS2, "MSYS2 MINGW64" shell):
 ```bash
-pacman -S --needed make mingw-w64-x86_64-{gcc,pkgconf,ffmpeg,SDL2,libvpx,opus}
+pacman -S --needed make mingw-w64-x86_64-{gcc,pkgconf,ffmpeg,SDL2,libvpx,opus,libsodium}
 make            # bin/mm-server.exe, bin/mm-stun.exe, bin/mm.exe
 make test       # unit tests
 make dist       # copy DLLs into bin/ so it runs on PCs without MSYS2
@@ -26,7 +28,7 @@ make dist       # copy DLLs into bin/ so it runs on PCs without MSYS2
 **Linux / WSL** (Ubuntu):
 ```bash
 sudo apt install build-essential pkg-config libavdevice-dev libavformat-dev libavcodec-dev \
-     libswscale-dev libswresample-dev libavutil-dev libsdl2-dev libvpx-dev libopus-dev
+     libswscale-dev libswresample-dev libavutil-dev libsdl2-dev libvpx-dev libopus-dev libsodium-dev
 make && make test
 ```
 

@@ -6,8 +6,9 @@
  *   client -> server             server -> client
  *   JOIN <room> <name>           JOINED <self-id> <room> [<id>:<name> ...]
  *   CAND <to> <type> <ip> <port> PEER_JOINED <id> <name>
- *   LEAVE                        PEER_LEFT <id>
- *   PING                         CAND <from> <type> <ip> <port>
+ *   KEY <to> <pubkey-hex>        PEER_LEFT <id>
+ *   LEAVE                        CAND <from> <type> <ip> <port>
+ *   PING                         KEY <from> <pubkey-hex>
  *                                PONG
  *                                ERROR <code> <text...>
  */
@@ -36,6 +37,8 @@ int  mm_tokenize(char *line, mm_msg_t *msg);
 int  mm_valid_name(const char *s);
 /* Candidate type token: "host" or "srflx". */
 int  mm_valid_cand_type(const char *s);
+/* X25519 public key: exactly 64 hex characters. */
+int  mm_valid_key_hex(const char *s);
 
 /* Line assembler for a TCP byte stream: TCP has no message boundaries,
  * so bytes are buffered until a '\n' completes a line. */

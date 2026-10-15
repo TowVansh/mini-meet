@@ -203,8 +203,16 @@ How to use this guide: go through the parts in order. For each topic, learn the 
 ### 5.1 Threats and what we do
 - DoS through huge lines → 512 B limit. Room hijack → relay only within a room. Bad input → name and IP validation.
 - Dead connections → heartbeat timeout. Spoofed STUN → USERNAME check (still no HMAC).
-- **Not done: media encryption.** Fix: SRTP (AES-CTR + HMAC-SHA1) with keys from DTLS or TLS signalling.
-- Q: What could an attacker on the same Wi-Fi do to your call? (Read or inject RTP, because it isn't encrypted.)
+### 5.1b ★ End-to-end encryption (`src/client/crypto.c`)
+- **Diffie-Hellman (X25519)**: each side has a secret key and a public key; it sends only the public key. Both compute the same shared secret, and an eavesdropper who saw only the public keys cannot.
+- `crypto_kx` derives 2 session keys from the shared secret, one per direction (tx of A = rx of B).
+- **AEAD ChaCha20-Poly1305**: encrypt the payload, authenticate payload + header, 16-byte tag.
+- RTP header = clear but authenticated (the receiver needs seq/timestamp first). Nonce = SSRC|seq|PT|ts, unique per packet.
+- Tamper test (unit test): flipping 1 bit of the seq makes decryption fail and the packet get dropped.
+- MITM: the server could swap public keys, so users compare the **safety code** (hash of both keys).
+- Forward secrecy: fresh keys every run, never stored.
+- Compare: SRTP = AES-CTR + HMAC-SHA1, with keys from DTLS (WebRTC). Ours has the same structure with different primitives.
+- Q: What could an attacker on the same Wi-Fi do? (See IPs, ports, timing and packet sizes, but not the audio/video. Injected packets fail authentication.) Q: Why can't the server decrypt? (It never has a secret key, only public keys.)
 
 ### 5.2 IPsec vs SRTP
 - IPsec: layer 3, AH/ESP, tunnel/transport mode, needs OS config, trouble with NAT (NAT-T needed).

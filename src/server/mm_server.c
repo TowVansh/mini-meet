@@ -117,11 +117,23 @@ static void handle_cand(client_t *c, mm_msg_t *m) {
     send_line(to, "CAND %s %s %s %s", c->id, m->argv[2], m->argv[3], m->argv[4]);
 }
 
+static void handle_key(client_t *c, mm_msg_t *m) {
+    client_t *to;
+    if (m->argc != 3) return send_error(c, "BAD_MESSAGE", "usage: KEY <to> <64 hex chars>");
+    if (!c->room[0]) return send_error(c, "NOT_JOINED", "join a room first");
+    if (!mm_valid_key_hex(m->argv[2])) return send_error(c, "BAD_MESSAGE", "bad public key");
+    to = find_in_room(c->room, m->argv[1]);
+    if (!to) return send_error(c, "UNKNOWN_PEER", "target peer is not in your room");
+    /* The server only ever sees public keys; it cannot derive the media keys. */
+    send_line(to, "KEY %s %s", c->id, m->argv[2]);
+}
+
 static void handle_line(client_t *c, char *line) {
     mm_msg_t m;
     if (mm_tokenize(line, &m) == 0) return;
     if (strcmp(m.argv[0], "JOIN") == 0) handle_join(c, &m);
     else if (strcmp(m.argv[0], "CAND") == 0) handle_cand(c, &m);
+    else if (strcmp(m.argv[0], "KEY") == 0) handle_key(c, &m);
     else if (strcmp(m.argv[0], "LEAVE") == 0) leave_room(c);
     else if (strcmp(m.argv[0], "PING") == 0) send_line(c, "PONG");
     else send_error(c, "BAD_MESSAGE", "unknown command");

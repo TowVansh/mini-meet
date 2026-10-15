@@ -81,6 +81,8 @@ void ice_send_candidates(peer_t *p) {
         inet_ntop(AF_INET, &ia, ip, sizeof ip);
         sig_send("CAND %s %s %s %u", p->id, g.lcands[i].type, ip, (unsigned)g.lcands[i].addr.port);
     }
+    /* Our X25519 public key, for end-to-end media encryption (crypto.h). */
+    if (g.encrypt) sig_send("KEY %s %s", p->id, g.pub_hex);
 }
 
 void ice_add_remote(peer_t *p, const char *type, const endpoint_t *ep) {
