@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mini-Meet: A Real-Time Video Conferencing System in C</title>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 17mm 20mm 17mm;
+    @bottom-center { content: counter(page); font: 9pt "Segoe UI", Arial, sans-serif; color: #666; }
+  }
+  @page :first { @bottom-center { content: none; } }
+  html { font: 10.4pt/1.45 Cambria, Georgia, "Times New Roman", serif; color: #1b1f24; }
+  body { margin: 0; }
+  h1, h2, h3, .cover, table, figcaption, .tag { font-family: "Segoe UI", Calibri, Arial, sans-serif; }
+  h1 { font-size: 17pt; margin: 16pt 0 6pt; color: #14213d; border-bottom: 2px solid #14213d; padding-bottom: 3pt; break-after: avoid; }
+  h1.newpage { break-before: page; margin-top: 0; }
+  h1.nobreak { break-before: auto; }
+  h2 { font-size: 12.5pt; margin: 14pt 0 4pt; color: #14213d; break-after: avoid; }
+  h3 { font-size: 10.8pt; margin: 10pt 0 3pt; color: #2f3a4d; break-after: avoid; }
+  p { margin: 0 0 6pt; text-align: justify; hyphens: auto; }
+  ul, ol { margin: 0 0 6pt 16pt; padding: 0; }
+  li { margin: 0 0 2pt; }
+  code, pre { font-family: Consolas, "Courier New", monospace; font-size: 8.6pt; }
+  code { background: #f1f3f5; padding: 0 2px; border-radius: 2px; }
+  pre { background: #f6f7f9; border: 1px solid #dde1e6; padding: 6pt 8pt; line-height: 1.3; white-space: pre; overflow: hidden; break-inside: avoid; margin: 4pt 0 8pt; }
+  table { border-collapse: collapse; width: 100%; font-size: 8.6pt; margin: 4pt 0 9pt; break-inside: avoid; }
+  th, td { border: 1px solid #cfd5dc; padding: 2.5pt 5pt; vertical-align: top; text-align: left; }
+  th { background: #e9edf2; font-weight: 600; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.hi td { background: #fff4e5; }
+  table.results { font-size: 7.6pt; }
+  table.results td, table.results th { padding: 1.6pt 3.5pt; }
+  figure { margin: 6pt 0 10pt; text-align: center; break-inside: avoid; }
+  figure img { max-width: 100%; border: 1px solid #dde1e6; }
+  figcaption { font-size: 8.6pt; color: #4a5568; margin-top: 3pt; }
+  caption { caption-side: top; text-align: left; font-size: 8.6pt; color: #4a5568; padding-bottom: 3pt; }
+  .cover { height: 245mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .cover .top { font-size: 10pt; letter-spacing: 1.5px; color: #b5560c; font-weight: 600; }
+  .cover .title { display: block; font-size: 34pt; font-weight: 700; color: #14213d; line-height: 1.05; margin: 30mm 0 6mm; }
+  .cover .sub { font-size: 15pt; color: #2f3a4d; line-height: 1.35; max-width: 150mm; }
+  .cover .meta { font-size: 10.5pt; color: #4a5568; line-height: 1.6; border-top: 1px solid #cfd5dc; padding-top: 6mm; }
+  .abstract { background: #f6f7f9; border-left: 3px solid #14213d; padding: 7pt 10pt; margin: 8pt 0 10pt; }
+  .toc { columns: 2; column-gap: 12mm; font-family: "Segoe UI", Calibri, Arial, sans-serif; font-size: 9.6pt; }
+  .toc div { break-inside: avoid; margin-bottom: 2pt; }
+  .small { font-size: 8.8pt; color: #4a5568; }
+  .key { font-weight: 700; }
+  .two { display: flex; gap: 8mm; } .two > div { flex: 1; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="cover">
+  <div>
+    <div class="top">COMPUTER NETWORKS · COURSE PROJECT REPORT</div>
+    <div class="title">Mini-Meet</div>
+    <div class="sub">A real-time video conferencing and adaptive streaming system written in C: custom signalling, STUN-based NAT traversal, an RTP-style media engine with jitter buffer and loss repair, congestion-aware rate control and end-to-end encryption, evaluated under emulated network impairment.</div>
+  </div>
+  <div class="meta">
+    Project 16: Video Conferencing Application (Mini-Meet), Group B, CO4 and CO5, Modules 4 and 5<br>
+    Also covers Project 11: Real-Time Adaptive Video/Voice Streaming System, CO4, Modules 1, 2 and 4<br>
+    Platforms: Windows (MinGW-w64) and Linux · Language: C11 · Tools: FFmpeg, UDP sockets, tc netem, Git<br>
+    Source code and data: github.com/TowVansh/mini-meet · October 2026
+  </div>
+</section>
+
+<!-- ============ ABSTRACT / CONTENTS ============ -->
+<h1 class="newpage">Abstract</h1>
+<div class="abstract">
+<p>Mini-Meet is a 2–4 person audio/video calling application implemented from the socket level up in C. A TCP signalling server written by us introduces the participants. Each client discovers its public address with STUN and traverses NAT with UDP hole punching. VP8 video and Opus audio then flow directly between peers in our own RTP-style framing layer over UDP, encrypted end to end with X25519 key agreement and ChaCha20-Poly1305. The receiver uses an adaptive, timestamp-driven jitter buffer, and repairs or conceals losses with NACK retransmission, keyframe requests and Opus FEC/PLC. RTCP receiver reports drive an AIMD rate controller with slow start, a delay-based congestion signal and feedback-starvation detection.</p>
+<p>We evaluated the system in 28 runs over Linux network namespaces with per-direction <code>tc netem</code> impairment, plus a jitter-buffer on/off experiment, a single call through changing bandwidth, a 4-person mesh test and a real call between two different networks. Random loss up to 5 % is invisible to the user. Without rate control, a 1 Mbit/s bottleneck drives RTT above 10 s (bufferbloat). With it the call stays at 20 fps with a 3 ms RTT. The jitter buffer reduces audio concealment under ±30 ms jitter from 88 % to 0.1 %, at the cost of about 140 ms of added delay. The real cross-network call connected peer-to-peer through both NATs (<code>srflx→srflx</code>).</p>
+</div>
+
+<h2>Contents</h2>
+<div class="toc">
+  <div>1. Introduction and objectives</div>
+  <div>2. System architecture</div>
+  <div>3. Signalling protocol</div>
+  <div>4. Media framing layer</div>
+  <div>5. NAT traversal</div>
+  <div>6. Jitter buffer and loss repair</div>
+  <div>7. Feedback and rate control</div>
+  <div>8. Security</div>
+  <div>9. Implementation and testing</div>
+  <div>10. Evaluation</div>
+  <div>11. Discussion</div>
+  <div>12. Limitations and future work</div>
+  <div>13. Conclusion</div>
+  <div>Appendix A. Syllabus coverage</div>
+  <div>Appendix B. How to build and run</div>
+  <div>References</div>
+</div>
+
+<!-- ============ 1 ============ -->
+<h1 class="newpage">1. Introduction and Objectives</h1>
+<p>Video calls combine two very different kinds of traffic. Call setup needs a few hundred bytes that must arrive reliably and in order. Media needs a continuous stream of time-critical packets, where a late packet is as useless as a lost one. The project builds both halves ourselves and measures how a real-time stream behaves when the network loses, delays, reorders or throttles packets.</p>
+<h2>1.1 Deliverables</h2>
+<table>
+<tr><th style="width:38%">Brief asks for</th><th>Delivered</th></tr>
+<tr><td colspan="2"><b>Project 16: Video conferencing application</b></td></tr>
+<tr><td>Working multi-party call with audio and video</td><td>2–4 participants, full mesh, VP8 640×480 at 20 fps + Opus 32 kbps; Windows and Linux</td></tr>
+<tr><td>Custom signalling server and documented protocol</td><td><code>mm-server</code>, a line-based TCP protocol (Section 3)</td></tr>
+<tr><td>NAT traversal across separate networks (STUN)</td><td>Own STUN client and server, UDP hole punching; Wi-Fi ↔ mobile hotspot connected <code>srflx→srflx</code></td></tr>
+<tr><td>Call quality under loss, jitter and bandwidth limits</td><td>28 netem runs, adaptation on/off (Section 10)</td></tr>
+<tr><td>Architecture: media path vs signalling path</td><td>Section 2</td></tr>
+<tr><td colspan="2"><b>Project 11: Real-time adaptive video/voice streaming</b></td></tr>
+<tr><td>Sender/receiver streaming live or recorded media over UDP</td><td>Webcam/microphone, or a recorded file paced to real time by its timestamps</td></tr>
+<tr><td>Custom framing layer with sequence numbers and timestamps</td><td>Section 4</td></tr>
+<tr><td>Jitter buffer with measured playout smoothness</td><td>Adaptive playout clock, playout-spread metric, buffer on/off experiment (Sections 6, 10.4)</td></tr>
+<tr><td>Bitrate adaptation across changing network conditions</td><td>RTCP feedback → AIMD controller; one call through 2 → 1 → 0.5 → 1 Mbit/s → clean (Sections 7, 10.5)</td></tr>
+<tr><td>Quality-vs-impairment report with objective metrics</td><td>Section 10</td></tr>
+<tr class="hi"><td>Beyond the briefs</td><td>End-to-end media encryption, 72 unit-test checks, prebuilt Windows release</td></tr>
+</table>
+
+<!-- ============ 2 ============ -->
+<h1>2. System Architecture</h1>
+<p>The system consists of three programs: <code>mm-server</code> (signalling), <code>mm-stun</code> (an optional STUN server) and <code>mm</code> (the call client). All networking is our own code on plain sockets. Libraries are used only for capture and decoding of camera and file input (FFmpeg), the codecs (libvpx, libopus), the window and speakers (SDL2), and the cryptographic primitives (libsodium).</p>
+<figure>
+<svg width="640" height="250" viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif" font-size="12">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5bb5"/></marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d9731f"/></marker>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#777"/></marker>
+  </defs>
+  <rect x="235" y="10" width="170" height="58" rx="8" fill="#14213d"/>
+  <text x="320" y="34" fill="#fff" text-anchor="middle" font-weight="600" font-size="14">mm-server</text>
+  <text x="320" y="53" fill="#c9d3e3" text-anchor="middle">TCP 9000 · rooms · relay</text>
+  <rect x="10" y="130" width="190" height="80" rx="8" fill="#fff" stroke="#14213d" stroke-width="1.5"/>
+  <text x="105" y="155" text-anchor="middle" font-weight="600" font-size="14">mm (Alice)</text>
+  <text x="105" y="174" text-anchor="middle" fill="#4a5568">capture · encode · encrypt</text>
+  <text x="105" y="192" text-anchor="middle" fill="#4a5568">jitter buffer · decode · play</text>
+  <rect x="440" y="130" width="190" height="80" rx="8" fill="#fff" stroke="#14213d" stroke-width="1.5"/>
+  <text x="535" y="155" text-anchor="middle" font-weight="600" font-size="14">mm (Bob)</text>
+  <text x="535" y="174" text-anchor="middle" fill="#4a5568">capture · encode · encrypt</text>
+  <text x="535" y="192" text-anchor="middle" fill="#4a5568">jitter buffer · decode · play</text>
+  <line x1="140" y1="128" x2="245" y2="70" stroke="#2f5bb5" stroke-width="2" stroke-dasharray="6 4" marker-start="url(#a1)" marker-end="url(#a1)"/>
+  <line x1="500" y1="128" x2="395" y2="70" stroke="#2f5bb5" stroke-width="2" stroke-dasharray="6 4" marker-start="url(#a1)" marker-end="url(#a1)"/>
+  <text x="178" y="96" fill="#2f5bb5" text-anchor="end">JOIN · CAND · KEY</text>
+  <text x="445" y="92" fill="#2f5bb5">text lines (TCP)</text>
+  <line x1="204" y1="170" x2="436" y2="170" stroke="#d9731f" stroke-width="4" marker-start="url(#a2)" marker-end="url(#a2)"/>
+  <text x="320" y="160" text-anchor="middle" fill="#b5560c" font-weight="600">RTP / RTCP / STUN over UDP</text>
+  <text x="320" y="190" text-anchor="middle" fill="#4a5568">peer-to-peer · encrypted · 0.1–1.2 Mbit/s</text>
+  <rect x="255" y="215" width="130" height="30" rx="6" fill="#f1f3f5" stroke="#999"/>
+  <text x="320" y="235" text-anchor="middle" fill="#333">STUN server</text>
+  <line x1="105" y1="212" x2="252" y2="228" stroke="#777" stroke-width="1.5" stroke-dasharray="2 3" marker-end="url(#a3)"/>
+  <line x1="535" y1="212" x2="388" y2="228" stroke="#777" stroke-width="1.5" stroke-dasharray="2 3" marker-end="url(#a3)"/>
+</svg>
+<figcaption>Figure 1. Signalling goes through the server over TCP. Media goes directly between peers over UDP.</figcaption>
+</figure>
+<table>
+<tr><th></th><th>Signalling path</th><th>Media path</th></tr>
+<tr><td>Purpose</td><td>Find peers, exchange network candidates and public keys</td><td>Carry audio and video</td></tr>
+<tr><td>Endpoints</td><td>client ↔ <code>mm-server</code></td><td>client ↔ client (full mesh)</td></tr>
+<tr><td>Transport</td><td>TCP, newline-delimited text</td><td>UDP: RTP + RTCP + STUN on one port</td></tr>
+<tr><td>Volume</td><td>A few hundred bytes per call setup</td><td>0.1–1.2 Mbit/s per stream, continuous</td></tr>
+<tr><td>Reliability need</td><td>Every line in order, so TCP fits</td><td>Late = useless, so UDP with selective repair</td></tr>
+<tr><td>If the server dies</td><td>New joins fail</td><td>Running calls continue</td></tr>
+</table>
+<p><b>Client threads.</b> <i>main</i> runs the SDL window and events. <i>net</i> runs one <code>select()</code> loop over the TCP and UDP sockets plus all timers (ICE checks, jitter-buffer playout, RTCP, NACK, statistics). <i>video-in</i> and <i>audio-in</i> capture and encode. One mutex protects the peer table and the sender state.</p>
+<figure>
+<img src="img/app-window.png" style="width:118mm" alt="Mini-Meet window">
+<figcaption>Figure 2. Client window: own view (left) and a remote participant (right) with the live statistics overlay (candidate pair, safety code, RTT, loss, jitter, freezes).</figcaption>
+</figure>
+
+<!-- ============ 3 ============ -->
+<h1>3. Signalling Protocol</h1>
+<p>TCP is a byte stream, so a single <code>recv()</code> may return half a message or several. Every message is therefore one ASCII line ending in <code>\n</code>, at most 512 bytes, made of space-separated tokens. The receiver buffers bytes until a newline completes a line. Because the protocol is plain text, it can be driven by hand with <code>telnet</code>.</p>
+<div class="two"><div>
+<table>
+<tr><th>Client → server</th><th>Meaning</th></tr>
+<tr><td><code>JOIN &lt;room&gt; &lt;name&gt;</code></td><td>Enter a room (max 4)</td></tr>
+<tr><td><code>CAND &lt;to&gt; &lt;type&gt; &lt;ip&gt; &lt;port&gt;</code></td><td>Send a network candidate</td></tr>
+<tr><td><code>KEY &lt;to&gt; &lt;64 hex&gt;</code></td><td>X25519 public key</td></tr>
+<tr><td><code>LEAVE</code> · <code>PING</code></td><td>Leave · keep-alive (5 s)</td></tr>
+</table></div><div>
+<table>
+<tr><th>Server → client</th><th>Meaning</th></tr>
+<tr><td><code>JOINED &lt;id&gt; &lt;room&gt; [id:name…]</code></td><td>Accepted, who is present</td></tr>
+<tr><td><code>PEER_JOINED</code> · <code>PEER_LEFT</code></td><td>Membership changes</td></tr>
+<tr><td><code>CAND</code> · <code>KEY</code> <code>&lt;from&gt; …</code></td><td>Relayed, <code>to</code> → <code>from</code></td></tr>
+<tr><td><code>PONG</code> · <code>ERROR &lt;code&gt; &lt;text&gt;</code></td><td>Reply · rejection</td></tr>
+</table></div></div>
+<pre>
+ C (newcomer)               mm-server                        A
+ |-- JOIN demo carol ---------->|                               |
+ |&lt;- JOINED c1 demo a1:alice ---|-- PEER_JOINED c1 carol ------&gt;|
+ |-- CAND a1 host/srflx ...  --&gt;|-- CAND c1 host/srflx ... ----&gt;|
+ |-- KEY a1 3f9a...c41d -------&gt;|-- KEY c1 3f9a...c41d -------&gt;|
+ |&lt;- CAND/KEY a1 ... -----------|&lt;- CAND/KEY c1 ... ------------|
+ |==== STUN checks to every candidate, both directions (hole punching) ====|
+ |==== RTP/RTCP media, encrypted, peer-to-peer over UDP ==================|
+</pre>
+<p><b>Validation.</b> The server rejects lines over 512 bytes (and closes the connection), names outside <code>[A-Za-z0-9_-]{1,32}</code>, malformed candidates and keys, and relaying to a peer outside the sender's room. It runs as a single thread with one <code>select()</code> loop (no locks), with <code>FD_SETSIZE</code> raised on Windows.</p>
+<p><b>Liveness.</b> The server drops a connection that has been silent for 20 s, and its peers receive <code>PEER_LEFT</code>. Testing showed that under heavy bufferbloat a client's PINGs can be stuck in the same queue as its media, so the server times it out while the call is still working. A client therefore keeps a peer for as long as that peer's media keeps arriving (it is removed 3 s after its packets stop), and it removes any peer silent for 30 s on its own, without the server.</p>
+
+<!-- ============ 4 ============ -->
+<h1>4. Media Framing Layer</h1>
+<p>STUN, RTP and RTCP share one UDP socket and are demultiplexed by their first byte (RFC 7983). STUN starts with 0–3 and carries the magic cookie <code>0x2112A442</code>. RTP and RTCP start with 128–191, and RTCP is recognised by packet type 200–206 in the second byte (RFC 5761). The source address then identifies the peer, and the payload type identifies the stream.</p>
+<pre>
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|V=2|P|X|  CC   |M|     PT      |       sequence number         |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                     timestamp (media clock)                   |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                     SSRC (stream identifier)                  |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+| S K 0 0 0 0 0 0 | VP8 payload (video only) ...   [16-byte AEAD tag]
+</pre>
+<table>
+<tr><th>PT</th><th>Payload</th><th>Clock</th><th>Rules</th></tr>
+<tr><td>96</td><td>VP8</td><td>90 kHz</td><td>1-byte descriptor: <code>S</code> = first packet of a frame, <code>K</code> = keyframe. Marker bit <code>M</code> = last packet of the frame. Payload ≤ 1160 bytes, so IP packets stay around 1200 bytes, under the MTU.</td></tr>
+<tr><td>97</td><td>VP8 retransmission</td><td>90 kHz</td><td>Same bytes and sequence number as the original. The separate PT keeps repairs out of the loss statistics.</td></tr>
+<tr><td>111</td><td>Opus</td><td>48 kHz</td><td>One 20 ms mono frame per packet, 32 kbps, in-band FEC. The timestamp advances by 960 per packet.</td></tr>
+</table>
+<ul>
+<li><b>Sequence number</b>: random start, +1 per packet per stream, wraps at 65535. Wrap-aware comparison is <code>(int16_t)(a − b) &gt; 0</code>.</li>
+<li><b>Timestamp</b>: media (capture) time, not send time. All packets of a video frame share it. This is what lets the receiver restore the sender's timing.</li>
+<li><b>SSRC</b>: random per stream at start-up.</li>
+<li><b>RTCP</b>: Sender Report every second with one report block per received stream; Generic NACK (205/1); PLI (206/1).</li>
+</ul>
+
+<!-- ============ 5 ============ -->
+<h1>5. NAT Traversal</h1>
+<p>A NAT rewrites the source address of outgoing packets and admits incoming packets only if they match a mapping it created. Two peers behind NAT therefore cannot simply send to each other. Mini-Meet uses a simplified ICE (RFC 8445):</p>
+<ol>
+<li><b>Gather</b>: the <i>host</i> candidate is the LAN address. The <i>server-reflexive</i> (srflx) candidate is the public IP:port that a STUN Binding request reports in <code>XOR-MAPPED-ADDRESS</code>. The address is XORed with the magic cookie so that NAT helpers do not rewrite it.</li>
+<li><b>Exchange</b>: candidates are sent as <code>CAND</code> lines through the signalling server.</li>
+<li><b>Check (hole punching)</b>: both peers send STUN Binding requests to every candidate of the other every 100 ms, with <code>USERNAME = "&lt;their-id&gt;:&lt;my-id&gt;"</code>. Each outgoing packet opens a mapping in the sender's own NAT, so the other side's packets can come back in. A request from an unknown address becomes a <i>peer-reflexive</i> candidate.</li>
+<li><b>Select and keep alive</b>: the first candidate that answers carries the media. A Binding request every 2.5 s keeps the NAT mappings from expiring.</li>
+</ol>
+<p>Hole punching fails when both sides (or one symmetric side and one port-restricted side) are behind a <b>symmetric NAT</b>, which assigns a new public port per destination. The client detects this after 15 s and reports that a TURN relay would be needed.</p>
+<table>
+<tr><th>Live test</th><th>Candidates</th><th>Selected pair</th><th>Result</th></tr>
+<tr><td>Laptop on college Wi-Fi (private 172.16.x, public 36.255.16.51) ↔ laptop on a mobile hotspot (private 10.129.x, public 152.57.86.31)</td><td>host + srflx on both</td><td><b>srflx→srflx</b>, all 1404 samples</td><td>Connected 3 times (ICE 99–752 ms); about 9 minutes of calls</td></tr>
+</table>
+
+<!-- ============ 6 ============ -->
+<h1>6. Jitter Buffer and Loss Repair</h1>
+<h2>6.1 Playout clock (jitter buffer)</h2>
+<p>Packets leave at even intervals (20 ms audio frames, 50 ms video frames) but arrive unevenly. Playing them on arrival gives choppy output. For every arriving packet the receiver records</p>
+<p style="text-align:center"><i>offset</i> = arrival time − media time (the RTP timestamp in µs), &nbsp; and plays media time <i>T</i> at &nbsp; <i>T</i> + P95(last 64 offsets).</p>
+<p>About 95 % of packets are therefore already present when their turn comes, and playout follows the sender's pace rather than the network's. The delay adapts by itself: a few milliseconds on a clean link, about 140 ms under ±30 ms jitter and about 220 ms under ±60 ms. Using the 95th percentile instead of the maximum trades ~5 % late packets (which concealment hides) for much lower latency. A video frame is decoded only when it is complete <b>and</b> due. Audio adds a 25 ms margin so that the next packet, which carries the FEC copy, is usually present. A late packet is dropped but still updates the clock, which is how the buffer learns to grow.</p>
+<h2>6.2 Loss repair and concealment</h2>
+<table>
+<tr><th style="width:24%">Mechanism</th><th>How it works</th></tr>
+<tr><td>Gap → NACK</td><td>A sequence gap puts the missing numbers on a list. After a reordering wait of about 2 × jitter (5–80 ms) they are requested with RTCP Generic NACK (packet ID + 16-bit bitmask, up to 17 losses per entry), resent every 1.5 × RTT, at most 4 tries.</td></tr>
+<tr><td>Retransmission</td><td>The sender keeps the last 1024 video packets and resends them as PT 97: selective-repeat ARQ with a deadline.</td></tr>
+<tr><td>Skip + PLI</td><td>A frame not repaired within max(120 ms, 1.5 × RTT + 40 ms) is skipped. Later frames reference it, so the receiver waits for a keyframe and requests one with PLI (rate-limited to at least 1.5 × RTT apart). The visible effect is a freeze.</td></tr>
+<tr><td>Opus FEC / PLC</td><td>A missing audio frame is rebuilt from the in-band FEC copy in the next packet if that has arrived, otherwise packet loss concealment extrapolates it. The encoder is told the measured loss rate so it can size the FEC.</td></tr>
+<tr><td>Metrics</td><td>Per second: <code>playout_sd_ms</code> (standard deviation of shown-frame intervals), <code>jb_delay_ms</code>, freezes (a gap longer than max(3 × average, average + 150 ms)), audio concealment %.</td></tr>
+</table>
+
+<!-- ============ 7 ============ -->
+<h1>7. Feedback and Rate Control</h1>
+<h2>7.1 Receiver feedback (RTCP, RFC 3550)</h2>
+<ul>
+<li><b>Loss</b>: expected = extended highest sequence − base + 1; lost = expected − received; fraction lost = (lost<sub>interval</sub> × 256) / expected<sub>interval</sub>.</li>
+<li><b>Interarrival jitter</b>: D = (R<sub>j</sub> − R<sub>i</sub>) − (S<sub>j</sub> − S<sub>i</sub>); J ← J + (|D| − J)/16, in timestamp units.</li>
+<li><b>Round-trip time</b>: RTT = A − LSR − DLSR, where A is the time a report arrives, LSR is our Sender Report time that it echoes, and DLSR is how long the peer held it. Both A and LSR come from our own clock, so no clock synchronisation is needed. Example: SR sent at 10.000 s, held 0.050 s, report arrives at 10.130 s, so RTT = 80 ms.</li>
+</ul>
+<h2>7.2 AIMD controller</h2>
+<table>
+<tr><th>Level</th><td class="n">0</td><td class="n">1</td><td class="n">2</td><td class="n">3 (start)</td><td class="n">4</td><td class="n">5</td></tr>
+<tr><th>Video bitrate</th><td class="n">1200 kbps</td><td class="n">800</td><td class="n">500</td><td class="n">300</td><td class="n">180</td><td class="n">100</td></tr>
+<tr><th>Resolution</th><td class="n">640×480</td><td class="n">640×480</td><td class="n">480×360</td><td class="n">320×240</td><td class="n">320×240</td><td class="n">160×120</td></tr>
+</table>
+<ul>
+<li><b>Congestion</b> (loss &gt; 8 % or queuing delay &gt; 120 ms): drop two levels (multiplicative decrease). <b>Clean</b> (loss &lt; 2 % and queuing delay &lt; 40 ms) three reports in a row: climb one level (additive increase), giving the TCP-Reno sawtooth.</li>
+<li><b>Queuing delay</b> = smoothed RTT − minimum smoothed RTT of the last 10 s, capped at 250 ms above the best RTT ever seen. This is the delay-based idea of TCP Vegas, BBR and WebRTC GCC: back off when a queue starts to fill, before packets are dropped. The window lets a longer path become the new baseline, and the cap stops a standing queue from becoming "normal".</li>
+<li><b>Slow start</b>: begin at 300 kbps and climb one level per clean report until the first congestion signal.</li>
+<li><b>Feedback starvation</b>: reports normally arrive every second. If none arrive for 2.5 s they are probably stuck in the same queue as the media, so the silence itself is treated as congestion.</li>
+<li>Bitrate changes are applied live (<code>vpx_codec_enc_config_set</code>). A resolution change restarts the encoder with a keyframe. In a mesh the encoder serves the worst receiver.</li>
+</ul>
+
+<!-- ============ 8 ============ -->
+<h1>8. Security</h1>
+<ul>
+<li><b>End-to-end media encryption.</b> Each client creates a fresh X25519 key pair and sends its public key through signalling. <code>crypto_kx</code> derives the same two 256-bit session keys (one per direction) on both peers. The server only ever sees public keys, so it cannot decrypt media. Every RTP payload is sealed with ChaCha20-Poly1305 (AEAD). The 12-byte header stays readable, because demultiplexing and sequence numbers need it, but it is authenticated. The nonce is SSRC ‖ seq ‖ PT ‖ timestamp, which is unique per packet. RTCP is encrypted the same way with an index. A tampered packet fails the tag check and is dropped.</li>
+<li><b>Man-in-the-middle.</b> A malicious server could substitute keys, so both screens show a short <b>safety code</b> (a hash of both public keys) for the users to compare. Key pairs are never stored, which gives forward secrecy across calls.</li>
+<li><b>Server hardening.</b> Line-length limit (DoS), name and candidate validation, relaying only within a room, 4-person cap, idle timeout. STUN checks carry peer IDs in <code>USERNAME</code>.</li>
+<li><b>Not covered.</b> No TLS on the signalling channel (keys are protected by the safety code instead), no replay window on media, and no message integrity on STUN checks.</li>
+</ul>
+
+<!-- ============ 9 ============ -->
+<h1>9. Implementation and Testing</h1>
+<table>
+<tr><th>Module</th><th>Files</th><th>Role</th></tr>
+<tr><td>Portable sockets</td><td><code>src/common/net.c</code></td><td>One API over Winsock and BSD sockets (<code>WSAStartup</code>/<code>closesocket</code>/<code>ioctlsocket</code> vs <code>close</code>/<code>fcntl</code>), TCP/UDP helpers, <code>SIO_UDP_CONNRESET</code> fix</td></tr>
+<tr><td>Signalling</td><td><code>proto.c</code>, <code>mm_server.c</code>, <code>sig.c</code></td><td>Line framing, rooms, relay, heartbeat, client side</td></tr>
+<tr><td>STUN / ICE</td><td><code>stun.c</code>, <code>mm_stun.c</code>, <code>ice.c</code></td><td>RFC 5389 encode/decode, STUN server, candidates, checks</td></tr>
+<tr><td>RTP / RTCP</td><td><code>rtp.c</code></td><td>Headers, SR/NACK/PLI, RFC 3550 statistics, playout clock</td></tr>
+<tr><td>Send side</td><td><code>media_in.c</code></td><td>FFmpeg capture or file (paced), VP8/Opus encoding, packetisation, retransmission history</td></tr>
+<tr><td>Receive side</td><td><code>media_out.c</code></td><td>Jitter buffers, NACK/PLI, decoding, freeze detection, SDL window, audio mixing</td></tr>
+<tr><td>Control / security</td><td><code>cc.c</code>, <code>crypto.c</code>, <code>netloop.c</code></td><td>AIMD controller, encryption, packet dispatch, statistics</td></tr>
+</table>
+<p>About <b>3,900 lines of C11</b>, built with one Makefile on Linux (gcc) and Windows (MSYS2 MinGW-w64). A prebuilt Windows release with all DLLs runs without installation. <code>make test</code> runs <b>72 unit-test checks</b> covering line framing, STUN encoding (including XOR mapping), RTP headers and sequence wrap-around, RTCP round trips (SR, NACK bitmask, PLI, 24-bit sign extension), RFC 3550 loss and jitter arithmetic, the playout clock, the AIMD controller (slow start, windowed baseline, standing queue), encryption, and tamper detection. System-level tests: 2- and 4-party calls on Windows and Linux, webcam and microphone, recorded-file streaming, and the cross-network call.</p>
+
+<!-- ============ 10 ============ -->
+<h1 class="newpage">10. Evaluation</h1>
+<h2>10.1 Method</h2>
+<p>Two Linux network namespaces (<code>mmA</code> 10.10.0.1, <code>mmB</code> 10.10.0.2) are joined by a veth pair and behave like two separate hosts. <code>tc netem</code> runs on both veth ends, so each direction is impaired separately, like a real access link. Clients send a built-in test pattern (VP8, up to 640×480, 20 fps) and a tone (Opus), so every run has identical input. Each run is 10 s clean, then the profile applied mid-call, then 45 s recorded, for 14 profiles × adaptation off (fixed 1200 kbps) / on. Values are steady-state medians (means for loss and concealment). Freezes are summed over both receivers.</p>
+<table>
+<tr><th>Profile</th><th>netem (per direction)</th><th>Profile</th><th>netem (per direction)</th></tr>
+<tr><td>loss1/5/10/20</td><td><code>loss N%</code></td><td>jitter30/60</td><td><code>delay 100ms ±30/60ms</code>, normal</td></tr>
+<tr><td>burst5</td><td>Gilbert-Elliott bursty loss</td><td>rate2m/1m/500k/250k</td><td><code>rate N</code>, 1000-packet FIFO</td></tr>
+<tr><td>delay100</td><td><code>delay 100ms</code></td><td>combo</td><td>80 ms ±20 ms, 3 % loss, 1 Mbit/s</td></tr>
+</table>
+
+<h2>10.2 Results</h2>
+<table class="results">
+<caption>Table 1. Steady-state results (t ≥ 15 s). "adapt" = rate controller off (fixed 1200 kbps) or on. Highlighted rows: bandwidth-limited cases where rate control decides the outcome.</caption>
+<tr><th>profile</th><th>adapt</th><th class="n">video kbps</th><th class="n">fps</th><th class="n">height</th><th class="n">loss %</th><th class="n">jitter ms</th><th class="n">RTT ms</th><th class="n">freezes</th><th class="n">audio conc. %</th><th class="n">playout sd ms</th><th class="n">audio buffer ms</th></tr>
+<tr><td>baseline</td><td>off</td><td class="n">1205</td><td class="n">20</td><td class="n">480</td><td class="n">0.0</td><td class="n">0.1</td><td class="n">0.2</td><td class="n">0</td><td class="n">0.0</td><td class="n">1.4</td><td class="n">27</td></tr>
+<tr><td>baseline</td><td>on</td><td class="n">1202</td><td class="n">20</td><td class="n">480</td><td class="n">0.0</td><td class="n">0.1</td><td class="n">0.7</td><td class="n">0</td><td class="n">0.0</td><td class="n">1.5</td><td class="n">27</td></tr>
+<tr><td>loss1</td><td>off</td><td class="n">1212</td><td class="n">20</td><td class="n">480</td><td class="n">1.0</td><td class="n">0.1</td><td class="n">0.3</td><td class="n">0</td><td class="n">0.0</td><td class="n">2.2</td><td class="n">27</td></tr>
+<tr><td>loss1</td><td>on</td><td class="n">1211</td><td class="n">20</td><td class="n">480</td><td class="n">0.9</td><td class="n">0.1</td><td class="n">0.2</td><td class="n">0</td><td class="n">0.0</td><td class="n">1.9</td><td class="n">27</td></tr>
+<tr><td>loss5</td><td>off</td><td class="n">1224</td><td class="n">20</td><td class="n">480</td><td class="n">4.9</td><td class="n">0.1</td><td class="n">0.3</td><td class="n">0</td><td class="n">0.2</td><td class="n">16.2</td><td class="n">27</td></tr>
+<tr><td>loss5</td><td>on</td><td class="n">685</td><td class="n">20</td><td class="n">360</td><td class="n">5.1</td><td class="n">0.2</td><td class="n">0.3</td><td class="n">0</td><td class="n">0.4</td><td class="n">16.3</td><td class="n">26</td></tr>
+<tr><td>loss10</td><td>off</td><td class="n">1218</td><td class="n">20</td><td class="n">480</td><td class="n">9.9</td><td class="n">0.1</td><td class="n">0.9</td><td class="n">2</td><td class="n">1.3</td><td class="n">23.2</td><td class="n">27</td></tr>
+<tr><td>loss10</td><td>on</td><td class="n">106</td><td class="n">20</td><td class="n">120</td><td class="n">9.2</td><td class="n">0.3</td><td class="n">0.3</td><td class="n">0</td><td class="n">1.1</td><td class="n">23.4</td><td class="n">26</td></tr>
+<tr><td>loss20</td><td>off</td><td class="n">1222</td><td class="n">19</td><td class="n">480</td><td class="n">19.8</td><td class="n">0.1</td><td class="n">0.2</td><td class="n">23</td><td class="n">4.0</td><td class="n">38.0</td><td class="n">27</td></tr>
+<tr><td>loss20</td><td>on</td><td class="n">104</td><td class="n">20</td><td class="n">120</td><td class="n">20.8</td><td class="n">0.2</td><td class="n">0.3</td><td class="n">15</td><td class="n">3.2</td><td class="n">40.8</td><td class="n">26</td></tr>
+<tr><td>burst5</td><td>off</td><td class="n">1188</td><td class="n">20</td><td class="n">480</td><td class="n">2.5</td><td class="n">0.1</td><td class="n">4.6</td><td class="n">0</td><td class="n">0.7</td><td class="n">3.8</td><td class="n">27</td></tr>
+<tr><td>burst5</td><td>on</td><td class="n">1224</td><td class="n">20</td><td class="n">480</td><td class="n">2.1</td><td class="n">0.1</td><td class="n">4.0</td><td class="n">0</td><td class="n">0.5</td><td class="n">2.3</td><td class="n">26</td></tr>
+<tr><td>delay100</td><td>off</td><td class="n">1218</td><td class="n">20</td><td class="n">480</td><td class="n">0.0</td><td class="n">0.1</td><td class="n">200</td><td class="n">0</td><td class="n">0.0</td><td class="n">1.4</td><td class="n">27</td></tr>
+<tr><td>delay100</td><td>on</td><td class="n">580</td><td class="n">20</td><td class="n">360</td><td class="n">0.0</td><td class="n">0.2</td><td class="n">200</td><td class="n">0</td><td class="n">0.0</td><td class="n">1.0</td><td class="n">26</td></tr>
+<tr><td>jitter30</td><td>off</td><td class="n">1372</td><td class="n">20</td><td class="n">480</td><td class="n">1.0</td><td class="n">33.5</td><td class="n">187</td><td class="n">1</td><td class="n">0.1</td><td class="n">12.4</td><td class="n">140</td></tr>
+<tr><td>jitter30</td><td>on</td><td class="n">278</td><td class="n">20</td><td class="n">240</td><td class="n">0.8</td><td class="n">33.8</td><td class="n">200</td><td class="n">0</td><td class="n">0.1</td><td class="n">4.7</td><td class="n">143</td></tr>
+<tr><td>jitter60</td><td>off</td><td class="n">1634</td><td class="n">20</td><td class="n">480</td><td class="n">1.7</td><td class="n">65.7</td><td class="n">194</td><td class="n">4</td><td class="n">0.2</td><td class="n">22.7</td><td class="n">222</td></tr>
+<tr><td>jitter60</td><td>on</td><td class="n">213</td><td class="n">20</td><td class="n">240</td><td class="n">1.5</td><td class="n">70.5</td><td class="n">211</td><td class="n">3</td><td class="n">0.1</td><td class="n">8.1</td><td class="n">220</td></tr>
+<tr><td>rate2m</td><td>off</td><td class="n">1228</td><td class="n">20</td><td class="n">480</td><td class="n">0.0</td><td class="n">7.8</td><td class="n">47</td><td class="n">0</td><td class="n">0.0</td><td class="n">1.3</td><td class="n">56</td></tr>
+<tr><td>rate2m</td><td>on</td><td class="n">1226</td><td class="n">20</td><td class="n">480</td><td class="n">0.0</td><td class="n">7.6</td><td class="n">39</td><td class="n">0</td><td class="n">0.0</td><td class="n">1.5</td><td class="n">56</td></tr>
+<tr class="hi"><td>rate1m</td><td>off</td><td class="n">923</td><td class="n">15</td><td class="n">480</td><td class="n">13.6</td><td class="n">13.6</td><td class="n">10513</td><td class="n">0</td><td class="n">34.1</td><td class="n">2.1</td><td class="n">387</td></tr>
+<tr class="hi"><td>rate1m</td><td>on</td><td class="n">198</td><td class="n">20</td><td class="n">240</td><td class="n">0.0</td><td class="n">3.4</td><td class="n">2.8</td><td class="n">0</td><td class="n">2.7</td><td class="n">1.2</td><td class="n">28</td></tr>
+<tr class="hi"><td>rate500k</td><td>off</td><td class="n">446</td><td class="n">0</td><td class="n">480</td><td class="n">39.6</td><td class="n">22.9</td><td class="n">19414</td><td class="n">2</td><td class="n">49.0</td><td class="n">5.8</td><td class="n">476</td></tr>
+<tr class="hi"><td>rate500k</td><td>on</td><td class="n">188</td><td class="n">20</td><td class="n">120</td><td class="n">0.0</td><td class="n">3.2</td><td class="n">9.8</td><td class="n">0</td><td class="n">11.7</td><td class="n">2.5</td><td class="n">38</td></tr>
+<tr><td>rate250k</td><td>off</td><td class="n">229</td><td class="n">4</td><td class="n">480</td><td class="n">24.7</td><td class="n">31.6</td><td class="n">17373</td><td class="n">2</td><td class="n">74.5</td><td class="n">7.0</td><td class="n">5073</td></tr>
+<tr><td>rate250k</td><td>on</td><td class="n">164</td><td class="n">9</td><td class="n">120</td><td class="n">1.0</td><td class="n">18.8</td><td class="n">11707</td><td class="n">6</td><td class="n">34.8</td><td class="n">5.2</td><td class="n">476</td></tr>
+<tr class="hi"><td>combo</td><td>off</td><td class="n">924</td><td class="n">0</td><td class="n">480</td><td class="n">13.8</td><td class="n">13.9</td><td class="n">10054</td><td class="n">9</td><td class="n">33.0</td><td class="n">2437</td><td class="n">349</td></tr>
+<tr class="hi"><td>combo</td><td>on</td><td class="n">231</td><td class="n">20</td><td class="n">240</td><td class="n">2.7</td><td class="n">14.0</td><td class="n">199</td><td class="n">64</td><td class="n">0.3</td><td class="n">41.6</td><td class="n">82</td></tr>
+</table>
+
+<h2>10.3 Bandwidth limits: bufferbloat vs rate control</h2>
+<figure>
+<img src="../results/timeline_rate1m.png" style="width:122mm" alt="rate1m timeline">
+<figcaption>Figure 3. A 1 Mbit/s cap applied at 9 s. Fixed rate (blue): the 1000-packet queue fills, RTT climbs steadily past 10 s, and once the queue is full loss sets in and video stops. Adaptive (green in the top panel, orange below): the controller backs off within a few seconds (RTT briefly peaks around 1.4 s), then probes back up in a sawtooth with RTT in milliseconds.</figcaption>
+</figure>
+
+<h2>10.4 Jitter buffer: playout smoothness under induced jitter</h2>
+<p>The jitter profiles were repeated with the jitter buffer turned off (<code>--no-jb</code>: playout follows the fastest packet with only a 25 ms margin).</p>
+<table>
+<tr><th>Jitter (each way)</th><th>Rate control</th><th>Buffer</th><th class="n">Audio concealed</th><th class="n">Video playout sd</th><th class="n">Freezes</th><th class="n">Buffer delay</th></tr>
+<tr><td>±30 ms</td><td>off</td><td>off</td><td class="n">87.9 %</td><td class="n">25.2 ms</td><td class="n">1</td><td class="n">25 ms</td></tr>
+<tr class="hi"><td>±30 ms</td><td>off</td><td><b>on</b></td><td class="n"><b>0.1 %</b></td><td class="n"><b>12.4 ms</b></td><td class="n">1</td><td class="n">140 ms</td></tr>
+<tr><td>±60 ms</td><td>off</td><td>off</td><td class="n">83.6 %</td><td class="n">40.7 ms</td><td class="n">13</td><td class="n">25 ms</td></tr>
+<tr class="hi"><td>±60 ms</td><td>off</td><td><b>on</b></td><td class="n"><b>0.2 %</b></td><td class="n"><b>22.7 ms</b></td><td class="n">4</td><td class="n">222 ms</td></tr>
+<tr><td>±60 ms</td><td>on</td><td>off</td><td class="n">84.2 %</td><td class="n">53.0 ms</td><td class="n">32</td><td class="n">25 ms</td></tr>
+<tr class="hi"><td>±60 ms</td><td>on</td><td><b>on</b></td><td class="n"><b>0.1 %</b></td><td class="n"><b>8.1 ms</b></td><td class="n">3</td><td class="n">220 ms</td></tr>
+</table>
+<p>Without a buffer most audio frames arrive after their 20 ms slot and must be concealed, and video frames are shown as unevenly as they arrive. The adaptive buffer brings concealment to about 0 %, at least halves the playout spread and cuts freezes (32 → 3 in the worst case). It pays for this with 140–220 ms of added delay, the fundamental smoothness-versus-latency trade-off of a jitter buffer.</p>
+
+<h2>10.5 Bitrate adaptation across changing network conditions</h2>
+<figure>
+<img src="../results/timeline_schedule.png" style="width:126mm" alt="changing conditions timeline">
+<figcaption>Figure 4. One call through clean → 2 Mbit/s → 1 Mbit/s → 500 kbit/s → 1 Mbit/s → clean (phase lines marked). The adaptive sender follows every change: it cuts within ~5 s of each drop, probes upward in a sawtooth, and returns to 1200 kbps ~17 s after the network clears. RTT peaks at about 1 s right after each drop. The fixed-rate sender reaches a 14 s RTT and 0–15 fps, and only recovers when the network is clean again.</figcaption>
+</figure>
+
+<h2>10.6 Further results</h2>
+<ul>
+<li><b>4-person mesh</b> (Windows, release build): all 12 directed streams received at 640×480, 20 fps, ~1190–1220 kbps each, playout spread ~2 ms. Each client uploads three copies (~3.6 Mbit/s).</li>
+<li><b>Real cross-network call</b>: <code>srflx→srflx</code>, median RTT 85 ms, loss &lt; 0.6 %. The mobile hotspot's uplink buffered in bursts (RTT spikes to 1.15 s), and the controller followed them down and back up.</li>
+<li><b>Recorded media</b> (<code>--file</code>, H.264 + AAC, looped): streamed in real time on Linux and Windows; the viewer received 640×480 at 20 fps with 0 % concealment.</li>
+</ul>
+<figure>
+<img src="../results/bars_audio_conceal_pct.png" style="width:140mm" alt="audio concealment by profile">
+<figcaption>Figure 5. Audio concealment by impairment profile, rate control off vs on. Bandwidth caps without rate control are the only conditions that ruin audio. Random loss and jitter are absorbed by FEC/PLC and the jitter buffer.</figcaption>
+</figure>
+
+<!-- ============ 11 ============ -->
+<h1>11. Discussion</h1>
+<ul>
+<li><b>Random loss up to 5 % is invisible.</b> NACK retransmission repairs video before the frame deadline, and Opus FEC keeps audio concealment ≤ 0.4 %. At 10–20 % loss a packet and its retransmission are sometimes both lost. The frame is skipped and a keyframe is awaited, which shows as freezes (23 at 20 %). Rate control reduces this to 15, because smaller frames have fewer packets that can be lost.</li>
+<li><b>Constant delay is harmless.</b> At 200 ms RTT the quality equals baseline. The windowed baseline keeps the controller from treating a longer path as congestion; a first version without it stayed at the lowest level permanently, and this test caught the bug.</li>
+<li><b>Bandwidth limits need rate control.</b> A fixed 1200 kbps stream into a 1 Mbit/s link fills netem's 1000-packet FIFO (bufferbloat): RTT 10.5 s, 14 % loss, 34 % audio concealed. At 500 kbit/s the video stops. The adaptive sender keeps RTT at 3–10 ms with 0 % loss at 20 fps. In the combined profile the fixed-rate call stalls entirely, while the adaptive call keeps 20 fps at 199 ms RTT.</li>
+<li><b>Known weaknesses</b>, all textbook ones:
+  <ul>
+  <li>Random (wireless-style) loss and jitter are misread as congestion, so the controller lowers quality unnecessarily (5 % loss → 690 kbps).</li>
+  <li>At 250 kbit/s, feedback-starvation detection backs off within 2.5 s, but the first seconds at full rate have already filled the queue. Even the lowest level plus audio drains it only slowly, so RTT stays high. A "pause video" level, or AQM such as CoDel in the network, would fix it.</li>
+  <li>A larger jitter buffer means more latency.</li>
+  </ul></li>
+<li><b>Comparison with a WebRTC prototype</b> built first (browser + Node.js): Chrome's GCC handled the same 1 Mbit/s cap by settling around 50 kbps. Both systems were stuck behind netem's buffer at 250 kbit/s. Our implementation makes every mechanism visible and measurable.</li>
+</ul>
+
+<!-- ============ 12 ============ -->
+<h1 class="nobreak" style="break-before: auto; margin-top: 14pt">12. Limitations and Future Work</h1>
+<ul>
+<li>No TURN relay: two symmetric NATs cannot connect.</li>
+<li>Mesh topology limits calls to about 4 people. An SFU with simulcast or SVC would scale, and would let each receiver get the quality its link supports.</li>
+<li>Signalling over plain TCP: add TLS and STUN message integrity, and a replay window for media.</li>
+<li>Controller: distinguish random loss from congestion (for example using delay trends), and add a pause-video level for very thin links.</li>
+<li>IPv4 only. One 45 s run per profile; repeated runs would give confidence intervals.</li>
+</ul>
+
+<!-- ============ 13 ============ -->
+<h1 class="nobreak" style="break-before: auto; margin-top: 14pt">13. Conclusion</h1>
+<p>Mini-Meet delivers working 2–4 person audio/video calls written in C on raw sockets, covering signalling, NAT traversal, framing, jitter buffering, loss repair, rate control and encryption. It runs on Windows and Linux and has been verified across two different real networks. The evaluation shows both halves of the real-time loop at work. The receiver-side jitter buffer turns uneven arrivals back into smooth playout (88 % → 0.1 % concealed audio under ±30 ms jitter). The sender-side rate controller, driven by receiver feedback, keeps a call usable on bandwidth-limited links where a fixed-rate stream collapses into seconds of delay. The remaining limitations are well-understood trade-offs of the design.</p>
+
+<!-- ============ APPENDICES ============ -->
+<h1>Appendix A. Syllabus Coverage</h1>
+<table>
+<tr><th style="width:14%">Module</th><th>Topic → where in Mini-Meet</th></tr>
+<tr><td>1 Foundations</td><td>Layering/encapsulation (VP8/Opus → RTP → UDP → IP); sockets API (<code>net.c</code>, Winsock/POSIX); throughput, delay, jitter, latency (measured per second); network byte order</td></tr>
+<tr><td>2 Direct links</td><td>Framing (frames split at MTU, S/M bits; newline framing on TCP); error detection (sequence gaps); error correction (Opus FEC); reliable transmission (NACK = selective repeat with deadline)</td></tr>
+<tr><td>3 Internetworking</td><td>NAT, private vs public addresses, STUN, hole punching; MTU and fragmentation; why IP multicast is not used (application-level fan-out: mesh/SFU)</td></tr>
+<tr><td>4 End-to-end</td><td>UDP vs TCP; demultiplexing on one port; connection setup/teardown and record boundaries; adaptive retransmission timers from RTT; RTCP feedback; AIMD and delay-based congestion control; FIFO queues and bufferbloat; QoS metrics</td></tr>
+<tr><td>5 Security/apps</td><td>Threats and server hardening; end-to-end encryption (X25519, ChaCha20-Poly1305, safety code) vs IPsec; firewall traversal; Telnet-style text protocol; DNS resolution of the STUN server</td></tr>
+<tr><td>6 Contemporary</td><td>Per-second streaming telemetry (CSV) vs SNMP polling</td></tr>
+</table>
+
+<h1 class="nobreak" style="break-before: auto; margin-top: 14pt">Appendix B. How to Build and Run</h1>
+<pre>
+# Windows (MSYS2 MinGW64 shell) or Linux: build and test
+make && make test
+
+# a call (up to 4 people per room)
+bin/mm-server                                            # signalling server, TCP 9000
+bin/mm --server 127.0.0.1 --room demo --name Alice         # webcam + microphone
+bin/mm --server 127.0.0.1 --room demo --name Bob --test    # test pattern + tone
+bin/mm --server 127.0.0.1 --room demo --name Cara --file media/sample.mp4   # recorded media
+
+# across networks: expose the server with a TCP tunnel, then join with --server bore.pub:PORT
+bore local 9000 --to bore.pub
+
+# evaluation (inside WSL/Linux as root), then the graphs
+bash bench/run-matrix.sh
+SCHEDULE="baseline:15 rate2m:20 rate1m:20 rate500k:20 rate1m:20 baseline:20" bash bench/run-matrix.sh
+python3 analysis/plot.py results/eval_*.csv
+</pre>
+<p class="small">Window keys: M mute, V camera, S statistics, F mirror, Q quit. Options: <code>--no-adapt</code>, <code>--no-jb</code>, <code>--no-encrypt</code>, <code>--csv FILE</code>, <code>--list-devices</code>.</p>
+
+<h2>References</h2>
+<ol class="small">
+<li>RFC 3550: RTP, A Transport Protocol for Real-Time Applications (2003).</li>
+<li>RFC 4585: Extended RTP Profile for RTCP-Based Feedback (NACK, PLI) (2006).</li>
+<li>RFC 5389: Session Traversal Utilities for NAT (STUN) (2008).</li>
+<li>RFC 8445: Interactive Connectivity Establishment (ICE) (2018).</li>
+<li>RFC 7983 and RFC 5761: multiplexing STUN, RTP and RTCP on a single port.</li>
+<li>RFC 6716: Opus audio codec; RFC 6386: VP8 data format.</li>
+<li>RFC 7748: X25519 elliptic-curve Diffie-Hellman; RFC 8439: ChaCha20-Poly1305 AEAD.</li>
+<li>Jacobson, V. "Congestion Avoidance and Control", SIGCOMM 1988 (AIMD).</li>
+<li>Carlucci et al. "Analysis and Design of the Google Congestion Control for WebRTC", MMSys 2016.</li>
+<li>Nichols, K. and Jacobson, V. "Controlling Queue Delay" (CoDel), ACM Queue 2012.</li>
+<li>Peterson, L. and Davie, B. <i>Computer Networks: A Systems Approach</i> (course textbook).</li>
+</ol>
+
+</body>
+</html>
