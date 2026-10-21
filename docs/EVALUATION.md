@@ -54,7 +54,7 @@
 
 Graphs in `results/`: `bars_*.png` (each metric, adaptation off vs on) and `timeline_<profile>.png` (send rate vs target, fps, loss, RTT, and jitter buffer over time).
 
-**4-peer mesh** (`results/mesh4_baseline_adapt1_p4__*.csv`, Windows): all **12 directed video streams** received at 640×480, 20 fps, about 1140–1200 kbps each. Each client uploads 3 copies (~3.6 Mbit/s), which is the cost of mesh.
+**4-peer mesh** (`results/mesh4_baseline_adapt1_p4__*.csv`, Windows): all **12 directed video streams** received at 640×480, 20 fps, about 1190–1220 kbps each, playout spread ~2 ms (re-run with the final build from the release zip). Each client uploads 3 copies (~3.6 Mbit/s), which is the cost of mesh.
 
 **Real cross-network call** (NAT_DEMO.md): college Wi-Fi ↔ laptop on a mobile hotspot, `srflx->srflx`, median RTT 85 ms with spikes to 1.15 s from the hotspot's uplink buffer. The controller followed the spikes down and back up.
 
