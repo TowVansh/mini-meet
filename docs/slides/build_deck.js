@@ -109,22 +109,37 @@ s.addNotes("Mini-Meet is a 2 to 4 person video calling app we built in C from th
 // ---------- 2. what we built ----------
 s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "Overview" });
 s.addText("Every deliverable in the brief is working", { placeholder: "title" });
-text(s, "Deliverables", { x: 0.6, y: 1.45, w: 5.7, h: 0.4, fontSize: 18, bold: true, color: C.text1 });
-bullets(s, ["2–4 person audio + video call (VP8 + Opus)", "Custom signalling server and documented protocol", "STUN NAT traversal across separate networks", "Quality measured under loss, jitter, bandwidth caps", "Architecture: media path vs signalling path"], { x: 0.6, y: 1.9, w: 5.9, h: 2.1, fontSize: 15 });
-text(s, "Milestones", { x: 0.6, y: 4.05, w: 5.7, h: 0.4, fontSize: 18, bold: true, color: C.text1 });
-bullets(s, ["Signalling server and two-party media path", "NAT traversal and multi-party (mesh) topology", "Quality instrumentation and adaptation behaviour", "Impairment evaluation with tc netem, report"], { x: 0.6, y: 4.5, w: 5.9, h: 1.7, fontSize: 15 });
-text(s, "Also built: end-to-end encryption · adaptive jitter buffer · Windows + Linux · 72 unit-test checks", { x: 0.6, y: 6.35, w: 6.2, h: 0.35, fontSize: 14, italic: true, color: C.accent1 });
-s.addImage({ path: path.join(ROOT, "docs/img/app-window.png"), x: 6.85, y: 1.6, w: 5.85, h: 3.44, objectName: id("screenshot") });
-text(s, "Client window: own view (left), remote peer with live stats (path, safety code, RTT, loss, jitter, freezes)", { x: 6.85, y: 5.15, w: 5.85, h: 0.6, fontSize: 12, color: C.accent5 });
-s.addNotes("Left: every deliverable and milestone from the project brief, all done. Right: the actual client window. The overlay shows the selected network path, the encryption safety code, RTT, loss, jitter and freezes, measured live.");
-
+const deliv = [
+  ["Multi-party call", "2–4 people, audio and video"],
+  ["Signalling", "our own server and a documented text protocol"],
+  ["NAT traversal", "STUN, tested across two networks"],
+  ["Call quality", "measured under loss, jitter and bandwidth limits"],
+  ["Architecture", "media path vs signalling path, documented"],
+];
+const miles = [
+  ["Months 1–2", "signalling server and two-party media path"],
+  ["Months 2–3", "NAT traversal and multi-party topology"],
+  ["Months 3–4", "quality instrumentation and adaptation"],
+  ["Months 5–6", "impairment evaluation, report and viva"],
+];
+card(s, 0.6, 1.5, 6.0, 4.75);
+text(s, "Deliverables", { x: 0.9, y: 1.7, w: 5.4, h: 0.45, fontSize: 19, bold: true, color: C.text1 });
+deliv.forEach(([h, d], i) => text(s, [{ text: h + ": ", options: { bold: true, color: C.text1 } }, { text: d }], { x: 0.9, y: 2.3 + i * 0.75, w: 5.45, h: 0.65, fontSize: 15 }));
+card(s, 6.85, 1.5, 5.85, 4.75);
+text(s, "Milestones", { x: 7.15, y: 1.7, w: 5.3, h: 0.45, fontSize: 19, bold: true, color: C.text1 });
+miles.forEach(([h, d], i) => {
+  badge(s, 7.15, 2.35 + i * 0.92, String(i + 1));
+  text(s, [{ text: h, options: { bold: true, color: C.text1, breakLine: true } }, { text: d }], { x: 7.8, y: 2.27 + i * 0.92, w: 4.7, h: 0.75, fontSize: 15 });
+});
+text(s, "Also built: end-to-end encryption · adaptive jitter buffer · Windows + Linux · 72 unit-test checks", { x: 0.6, y: 6.45, w: 12.1, h: 0.35, fontSize: 15, italic: true, color: C.accent1 });
+s.addNotes("Every deliverable and milestone from the project brief is done. The live demo on our laptops comes at the end.");
 // ---------- 3. architecture ----------
 pres.addSection({ title: "How it works" });
 s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "How it works" });
 s.addText("Two paths: signalling via the server, media peer-to-peer", { placeholder: "title" });
 s.addShape(S.ROUNDED_RECTANGLE, { x: 5.05, y: 1.45, w: 3.2, h: 0.95, rectRadius: 0.12, fill: { color: C.text1 }, line: { type: "none" }, objectName: id("server") });
 text(s, [{ text: "mm-server", options: { bold: true, fontSize: 18, color: C.background1, breakLine: true } }, { text: "TCP 9000 · rooms · relay", options: { fontSize: 13, color: C.background2 } }], { x: 5.05, y: 1.45, w: 3.2, h: 0.95, align: "center", valign: "middle" });
-for (const [x, name] of [[0.6, "mm (Alice)"], [9.55, "mm (Bob)"]]) {
+for (const [x, name] of [[0.6, "mm (PC1)"], [9.55, "mm (PC2)"]]) {
   s.addShape(S.ROUNDED_RECTANGLE, { x, y: 3.1, w: 3.15, h: 1.15, rectRadius: 0.12, fill: { color: C.background1 }, line: { color: HEX.dk1, width: 1.5 }, objectName: id("peer") });
   text(s, [{ text: name, options: { bold: true, fontSize: 18, color: C.text1, breakLine: true } }, { text: "capture · encode · decode · play", options: { fontSize: 13, color: C.text2 } }], { x: x + 0.15, y: 3.1, w: 2.85, h: 1.15, align: "center", valign: "middle" });
 }
@@ -150,7 +165,7 @@ s.addNotes("Signalling is small and must be reliable, so it uses TCP through our
 s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "How it works" });
 s.addText("Signalling: a plain-text protocol over TCP", { placeholder: "title" });
 s.addShape(S.ROUNDED_RECTANGLE, { x: 0.6, y: 1.5, w: 5.9, h: 4.9, rectRadius: 0.12, fill: { color: C.text1 }, line: { type: "none" }, objectName: id("console") });
-text(s, ["→ JOIN demo carol", "← JOINED c1 demo a1:alice", "→ CAND a1 srflx 49.36.1.2 50000", "→ KEY a1 3f9a…c41d", "← CAND a1 host 10.0.0.5 41000", "← KEY a1 77be…09aa", "→ PING", "← PONG"].join("\n"),
+text(s, ["→ JOIN demo pc3", "← JOINED c1 demo a1:pc1", "→ CAND a1 srflx 49.36.1.2 50000", "→ KEY a1 3f9a…c41d", "← CAND a1 host 10.0.0.5 41000", "← KEY a1 77be…09aa", "→ PING", "← PONG"].join("\n"),
   { x: 0.95, y: 1.85, w: 5.3, h: 4.3, fontFace: "Consolas", fontSize: 17, color: C.background2, paraSpaceAfter: 8 });
 const sig = [
   ["1", "Newline framing", "TCP is a byte stream; lines rebuild message boundaries."],
@@ -437,7 +452,7 @@ take.forEach(([h, d], i) => {
   text(s, d, { x: 1.55, y: y + 0.5, w: 11.0, h: 0.6, fontSize: 16, color: C.background2 });
 });
 s.addShape(S.ROUNDED_RECTANGLE, { x: 0.8, y: 5.65, w: 11.7, h: 1.2, rectRadius: 0.12, fill: { color: "1F2E52" }, line: { type: "none" }, objectName: id("demo") });
-text(s, [{ text: "Live demo", options: { bold: true, fontSize: 15, color: C.accent1, breakLine: true } }, { text: "mm-server   ·   mm --server 127.0.0.1 --room demo --name A   ·   mm ... --name B --test", options: { fontFace: "Consolas", fontSize: 14, color: C.background2 } }], { x: 1.1, y: 5.75, w: 11.2, h: 1.0, valign: "middle" });
+text(s, [{ text: "Live demo", options: { bold: true, fontSize: 15, color: C.accent1, breakLine: true } }, { text: "mm-server   ·   mm --server 127.0.0.1 --room demo --name PC1   ·   mm ... --name PC2 --test", options: { fontFace: "Consolas", fontSize: 14, color: C.background2 } }], { x: 1.1, y: 5.75, w: 11.2, h: 1.0, valign: "middle" });
 s.addNotes("To summarise: a real-time stream needs smoothing at the receiver and rate control at the sender, driven by receiver feedback. We built every part ourselves and measured it. Now a live demo.");
 
 // ---------- write ----------

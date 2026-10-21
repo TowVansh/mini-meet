@@ -128,11 +128,11 @@
   <text x="320" y="34" fill="#fff" text-anchor="middle" font-weight="600" font-size="14">mm-server</text>
   <text x="320" y="53" fill="#c9d3e3" text-anchor="middle">TCP 9000 · rooms · relay</text>
   <rect x="10" y="130" width="190" height="80" rx="8" fill="#fff" stroke="#14213d" stroke-width="1.5"/>
-  <text x="105" y="155" text-anchor="middle" font-weight="600" font-size="14">mm (Alice)</text>
+  <text x="105" y="155" text-anchor="middle" font-weight="600" font-size="14">mm (PC1)</text>
   <text x="105" y="174" text-anchor="middle" fill="#4a5568">capture · encode · encrypt</text>
   <text x="105" y="192" text-anchor="middle" fill="#4a5568">jitter buffer · decode · play</text>
   <rect x="440" y="130" width="190" height="80" rx="8" fill="#fff" stroke="#14213d" stroke-width="1.5"/>
-  <text x="535" y="155" text-anchor="middle" font-weight="600" font-size="14">mm (Bob)</text>
+  <text x="535" y="155" text-anchor="middle" font-weight="600" font-size="14">mm (PC2)</text>
   <text x="535" y="174" text-anchor="middle" fill="#4a5568">capture · encode · encrypt</text>
   <text x="535" y="192" text-anchor="middle" fill="#4a5568">jitter buffer · decode · play</text>
   <line x1="140" y1="128" x2="245" y2="70" stroke="#2f5bb5" stroke-width="2" stroke-dasharray="6 4" marker-start="url(#a1)" marker-end="url(#a1)"/>
@@ -159,10 +159,6 @@
 <tr><td>If the server dies</td><td>New joins fail</td><td>Running calls continue</td></tr>
 </table>
 <p><b>Client threads.</b> <i>main</i> runs the SDL window and events. <i>net</i> runs one <code>select()</code> loop over the TCP and UDP sockets plus all timers (ICE checks, jitter-buffer playout, RTCP, NACK, statistics). <i>video-in</i> and <i>audio-in</i> capture and encode. One mutex protects the peer table and the sender state.</p>
-<figure>
-<img src="img/app-window.png" style="width:118mm" alt="Mini-Meet window">
-<figcaption>Figure 2. Client window: own view (left) and a remote participant (right) with the live statistics overlay (candidate pair, safety code, RTT, loss, jitter, freezes).</figcaption>
-</figure>
 
 <!-- ============ 3 ============ -->
 <h1>3. Signalling Protocol</h1>
@@ -183,9 +179,9 @@
 <tr><td><code>PONG</code> · <code>ERROR &lt;code&gt; &lt;text&gt;</code></td><td>Reply · rejection</td></tr>
 </table></div></div>
 <pre>
- C (newcomer)               mm-server                        A
- |-- JOIN demo carol ---------->|                               |
- |&lt;- JOINED c1 demo a1:alice ---|-- PEER_JOINED c1 carol ------&gt;|
+ PC3 (newcomer)             mm-server                        PC1
+ |-- JOIN demo pc3 ------------>|                               |
+ |&lt;- JOINED c1 demo a1:pc1 -----|-- PEER_JOINED c1 pc3 --------&gt;|
  |-- CAND a1 host/srflx ...  --&gt;|-- CAND c1 host/srflx ... ----&gt;|
  |-- KEY a1 3f9a...c41d -------&gt;|-- KEY c1 3f9a...c41d -------&gt;|
  |&lt;- CAND/KEY a1 ... -----------|&lt;- CAND/KEY c1 ... ------------|
@@ -347,7 +343,7 @@
 <h2>10.3 Bandwidth limits: bufferbloat vs rate control</h2>
 <figure>
 <img src="../results/timeline_rate1m.png" style="width:122mm" alt="rate1m timeline">
-<figcaption>Figure 3. A 1 Mbit/s cap applied at 9 s. Fixed rate (blue): the 1000-packet queue fills, RTT climbs steadily past 10 s, and once the queue is full loss sets in and video stops. Adaptive (green in the top panel, orange below): the controller backs off within a few seconds (RTT briefly peaks around 1.4 s), then probes back up in a sawtooth with RTT in milliseconds.</figcaption>
+<figcaption>Figure 2. A 1 Mbit/s cap applied at 9 s. Fixed rate (blue): the 1000-packet queue fills, RTT climbs steadily past 10 s, and once the queue is full loss sets in and video stops. Adaptive (green in the top panel, orange below): the controller backs off within a few seconds (RTT briefly peaks around 1.4 s), then probes back up in a sawtooth with RTT in milliseconds.</figcaption>
 </figure>
 
 <h2>10.4 Jitter buffer: playout smoothness under induced jitter</h2>
@@ -366,7 +362,7 @@
 <h2>10.5 Bitrate adaptation across changing network conditions</h2>
 <figure>
 <img src="../results/timeline_schedule.png" style="width:126mm" alt="changing conditions timeline">
-<figcaption>Figure 4. One call through clean → 2 Mbit/s → 1 Mbit/s → 500 kbit/s → 1 Mbit/s → clean (phase lines marked). The adaptive sender follows every change: it cuts within ~5 s of each drop, probes upward in a sawtooth, and returns to 1200 kbps ~17 s after the network clears. RTT peaks at about 1 s right after each drop. The fixed-rate sender reaches a 14 s RTT and 0–15 fps, and only recovers when the network is clean again.</figcaption>
+<figcaption>Figure 3. One call through clean → 2 Mbit/s → 1 Mbit/s → 500 kbit/s → 1 Mbit/s → clean (phase lines marked). The adaptive sender follows every change: it cuts within ~5 s of each drop, probes upward in a sawtooth, and returns to 1200 kbps ~17 s after the network clears. RTT peaks at about 1 s right after each drop. The fixed-rate sender reaches a 14 s RTT and 0–15 fps, and only recovers when the network is clean again.</figcaption>
 </figure>
 
 <h2>10.6 Further results</h2>
@@ -377,7 +373,7 @@
 </ul>
 <figure>
 <img src="../results/bars_audio_conceal_pct.png" style="width:140mm" alt="audio concealment by profile">
-<figcaption>Figure 5. Audio concealment by impairment profile, rate control off vs on. Bandwidth caps without rate control are the only conditions that ruin audio. Random loss and jitter are absorbed by FEC/PLC and the jitter buffer.</figcaption>
+<figcaption>Figure 4. Audio concealment by impairment profile, rate control off vs on. Bandwidth caps without rate control are the only conditions that ruin audio. Random loss and jitter are absorbed by FEC/PLC and the jitter buffer.</figcaption>
 </figure>
 
 <!-- ============ 11 ============ -->
@@ -428,9 +424,9 @@ make && make test
 
 # a call (up to 4 people per room)
 bin/mm-server                                            # signalling server, TCP 9000
-bin/mm --server 127.0.0.1 --room demo --name Alice         # webcam + microphone
-bin/mm --server 127.0.0.1 --room demo --name Bob --test    # test pattern + tone
-bin/mm --server 127.0.0.1 --room demo --name Cara --file media/sample.mp4   # recorded media
+bin/mm --server 127.0.0.1 --room demo --name PC1           # webcam + microphone
+bin/mm --server 127.0.0.1 --room demo --name PC2 --test    # test pattern + tone
+bin/mm --server 127.0.0.1 --room demo --name PC3 --file media/sample.mp4    # recorded media
 
 # across networks: expose the server with a TCP tunnel, then join with --server bore.pub:PORT
 bore local 9000 --to bore.pub

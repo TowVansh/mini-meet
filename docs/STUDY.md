@@ -235,7 +235,7 @@ How to use this guide: go through the parts in order. For each topic, learn the 
 - Stateful firewalls let replies back in. Hole punching relies on that.
 
 ### 5.4 Application protocols to relate to
-- **Telnet**: our signalling is plain text, so you can type `JOIN demo bob` by hand in telnet.
+- **Telnet**: our signalling is plain text, so you can type `JOIN demo pc2` by hand in telnet.
 - **HTTP**: also text-based request/response (compare with our protocol). v1 used HTTP + WebSocket.
 - **DNS**: `getaddrinfo("stun.l.google.com")` before STUN.
 - **SNMP vs telemetry**: polling vs push. Our per-second CSV is push telemetry.
@@ -281,7 +281,7 @@ How to use this guide: go through the parts in order. For each topic, learn the 
 ## Part 9: Live demo checklist
 
 1. `make` (or run the release .exe files), then start `mm-server`.
-2. Two windows on one PC: `mm --server 127.0.0.1 --room demo --name A` and `... --name B --test`.
+2. Two windows on one PC: `mm --server 127.0.0.1 --room demo --name PC1` and `... --name PC2 --test`.
 3. Point at the overlay: PATH, RTT, LOSS, JITTER, FREEZES, LVL.
 4. Optional: `telnet 127.0.0.1 9000`, then type `JOIN demo me` to show the text protocol.
 5. Show `results/` graphs and `docs/EVALUATION.md`.

@@ -50,12 +50,12 @@ The server closes any connection that has sent nothing for **20 s**. Clients PIN
 
 A client does not trust `PEER_LEFT` alone. If media from that peer is still arriving, its PINGs were probably just stuck in the same congested queue, so the client keeps the peer until its packets stop for 3 s. Media liveness also works without the server: a connected peer that sends nothing for 30 s is removed. STUN keepalives answer every 2.5 s, so an idle but alive peer is never removed. (Found in testing: under 15 s of bufferbloat the server timed a peer out and the call was torn down although the network had recovered.)
 
-### Call setup sequence (C joins a room holding A)
+### Call setup sequence (PC3 joins a room holding PC1)
 
 ```
- C                         mm-server                        A
- |-- JOIN demo carol ------->|                               |
- |<- JOINED c1 demo a1:alice-|-- PEER_JOINED c1 carol ------>|
+ PC3                       mm-server                        PC1
+ |-- JOIN demo pc3 --------->|                               |
+ |<- JOINED c1 demo a1:pc1 --|-- PEER_JOINED c1 pc3 -------->|
  |-- CAND a1 host 192.168.1.9 50000 -->|-- CAND c1 host ... ->|
  |-- CAND a1 srflx 49.36.1.2 50000 --->|-- CAND c1 srflx ...->|
  |<- CAND a1 host ... --------|<-- CAND c1 host 10.0.0.5 41000|

@@ -38,9 +38,9 @@ make && make test
 
 ```bash
 bin/mm-server                                   # signalling server, TCP 9000
-bin/mm --server 127.0.0.1 --room demo --name Alice             # webcam + mic
-bin/mm --server 127.0.0.1 --room demo --name Bob --test        # test pattern + tone
-bin/mm --server 127.0.0.1 --room demo --name Cara --file media/sample.mp4   # recorded media (looped)
+bin/mm --server 127.0.0.1 --room demo --name PC1               # webcam + mic
+bin/mm --server 127.0.0.1 --room demo --name PC2 --test        # test pattern + tone
+bin/mm --server 127.0.0.1 --room demo --name PC3 --file media/sample.mp4    # recorded media (looped)
 ```
 
 Up to 4 clients per room. On another PC, use `--server <server-ip>`. Keys in the window: **M** mute, **V** camera off, **S** stats overlay, **F** mirror, **Q** quit. Run `bin/mm --list-devices` to see cameras and microphones, then choose with `--video-dev "..." --audio-dev "..."`.

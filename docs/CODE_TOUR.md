@@ -92,7 +92,7 @@ Open the file, jump to the line, explain the function. Grouped by the questions 
 ```
 make test                                   # 72 unit-test checks: STUN, RTP/RTCP, stats math, jitter buffer, AIMD, crypto, tamper
 bin\mm-server.exe
-bin\mm.exe --server 127.0.0.1 --room demo --name A
-bin\mm.exe --server 127.0.0.1 --room demo --name B --test
+bin\mm.exe --server 127.0.0.1 --room demo --name PC1
+bin\mm.exe --server 127.0.0.1 --room demo --name PC2 --test
 ```
 Point at the overlay: PATH, RTT, LOSS, JITTER, E2E safety code (same on both windows).

@@ -39,8 +39,8 @@ static void test_linebuf(void) {
     char out[MM_LINE_MAX], big[MM_LINE_MAX + 10];
     CHECK(mm_linebuf_push(&lb, "JOIN ro", 7) == 0);
     CHECK(mm_linebuf_pop(&lb, out, sizeof out) == 0);          /* incomplete: TCP split the line */
-    CHECK(mm_linebuf_push(&lb, "om alice\nPING\n", 14) == 0);
-    CHECK(mm_linebuf_pop(&lb, out, sizeof out) == 1 && strcmp(out, "JOIN room alice") == 0);
+    CHECK(mm_linebuf_push(&lb, "om pc1\nPING\n", 12) == 0);
+    CHECK(mm_linebuf_pop(&lb, out, sizeof out) == 1 && strcmp(out, "JOIN room pc1") == 0);
     CHECK(mm_linebuf_pop(&lb, out, sizeof out) == 1 && strcmp(out, "PING") == 0);
     CHECK(mm_linebuf_pop(&lb, out, sizeof out) == 0);
     memset(big, 'x', sizeof big);
