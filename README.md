@@ -16,6 +16,7 @@ Course project 16, Computer Networks (CO4, CO5; Modules 4 and 5).
 | [docs/STUDY.md](docs/STUDY.md) | Syllabus-ordered study guide |
 | [docs/PROJECT11.md](docs/PROJECT11.md) | Checklist: how Mini-Meet also covers Project 11 (adaptive streaming) |
 | [Mini-Meet-Report.pdf](Mini-Meet-Report.pdf) | Full project report (PDF, 14 pages; source: docs/report.html) |
+| [Mini-Meet-Slides.pptx](Mini-Meet-Slides.pptx) | Review presentation (16 slides with speaker notes; built by docs/slides/build_deck.js) |
 
 ## Build
 
