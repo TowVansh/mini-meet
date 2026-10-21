@@ -55,12 +55,11 @@
   <div>
     <div class="top">COMPUTER NETWORKS · COURSE PROJECT REPORT</div>
     <div class="title">Mini-Meet</div>
-    <div class="sub">A real-time video conferencing and adaptive streaming system written in C: custom signalling, STUN-based NAT traversal, an RTP-style media engine with jitter buffer and loss repair, congestion-aware rate control and end-to-end encryption, evaluated under emulated network impairment.</div>
+    <div class="sub">A two-to-four-party video conferencing application written in C: our own signalling server and protocol, STUN-based NAT traversal, raw UDP media with jitter buffer and loss repair, congestion-aware rate control and end-to-end encryption, evaluated under emulated network impairment.</div>
   </div>
   <div class="meta">
-    Project 16: Video Conferencing Application (Mini-Meet), Group B, CO4 and CO5, Modules 4 and 5<br>
-    Also covers Project 11: Real-Time Adaptive Video/Voice Streaming System, CO4, Modules 1, 2 and 4<br>
-    Platforms: Windows (MinGW-w64) and Linux · Language: C11 · Tools: FFmpeg, UDP sockets, tc netem, Git<br>
+    Project 16: Video Conferencing Application (Mini-Meet) · Group B · CO4, CO5 · Modules 4 and 5<br>
+    Platforms: Windows (MinGW-w64) and Linux · Language: C11 · Tools: raw UDP + codecs (VP8, Opus), STUN, Python, tc netem, Git<br>
     Source code and data: github.com/TowVansh/mini-meet · October 2026
   </div>
 </section>
@@ -98,20 +97,22 @@
 <h2>1.1 Deliverables</h2>
 <table>
 <tr><th style="width:38%">Brief asks for</th><th>Delivered</th></tr>
-<tr><td colspan="2"><b>Project 16: Video conferencing application</b></td></tr>
 <tr><td>Working multi-party call with audio and video</td><td>2–4 participants, full mesh, VP8 640×480 at 20 fps + Opus 32 kbps; Windows and Linux</td></tr>
 <tr><td>Custom signalling server and documented protocol</td><td><code>mm-server</code>, a line-based TCP protocol (Section 3)</td></tr>
 <tr><td>NAT traversal across separate networks (STUN)</td><td>Own STUN client and server, UDP hole punching; Wi-Fi ↔ mobile hotspot connected <code>srflx→srflx</code></td></tr>
-<tr><td>Call quality under loss, jitter and bandwidth limits</td><td>28 netem runs, adaptation on/off (Section 10)</td></tr>
+<tr><td>Call quality under loss, jitter and bandwidth limits: how the system degrades and adapts</td><td>28 netem runs with rate control off/on, a jitter-buffer on/off experiment, and one call through changing bandwidth (Section 10)</td></tr>
 <tr><td>Architecture: media path vs signalling path</td><td>Section 2</td></tr>
-<tr><td colspan="2"><b>Project 11: Real-time adaptive video/voice streaming</b></td></tr>
-<tr><td>Sender/receiver streaming live or recorded media over UDP</td><td>Webcam/microphone, or a recorded file paced to real time by its timestamps</td></tr>
-<tr><td>Custom framing layer with sequence numbers and timestamps</td><td>Section 4</td></tr>
-<tr><td>Jitter buffer with measured playout smoothness</td><td>Adaptive playout clock, playout-spread metric, buffer on/off experiment (Sections 6, 10.4)</td></tr>
-<tr><td>Bitrate adaptation across changing network conditions</td><td>RTCP feedback → AIMD controller; one call through 2 → 1 → 0.5 → 1 Mbit/s → clean (Sections 7, 10.5)</td></tr>
-<tr><td>Quality-vs-impairment report with objective metrics</td><td>Section 10</td></tr>
-<tr class="hi"><td>Beyond the briefs</td><td>End-to-end media encryption, 72 unit-test checks, prebuilt Windows release</td></tr>
+<tr class="hi"><td>Beyond the brief</td><td>End-to-end media encryption, adaptive jitter buffer, recorded-file streaming, 72 unit-test checks, prebuilt Windows release</td></tr>
 </table>
+<h2>1.2 Milestones</h2>
+<table>
+<tr><th style="width:38%">Milestone</th><th>Result</th></tr>
+<tr><td>1. Signalling server and two-party media path</td><td><code>mm-server</code> + RTP-style VP8/Opus over UDP (Sections 3, 4)</td></tr>
+<tr><td>2. NAT traversal and multi-party topology</td><td>STUN + hole punching (Section 5); full mesh of up to 4, all 12 streams verified (Section 10.6)</td></tr>
+<tr><td>3. Quality instrumentation and adaptation behaviour</td><td>Per-second RTCP-based statistics; jitter buffer, loss repair and AIMD rate control (Sections 6, 7)</td></tr>
+<tr><td>4. Impairment evaluation, report and viva</td><td><code>tc netem</code> evaluation (Section 10), this report</td></tr>
+</table>
+<p class="small">Required tools: raw UDP + codecs (our framing over UDP with VP8 and Opus), STUN (own client and server), Python (evaluation analysis; a first Node.js/WebRTC prototype was used for comparison), <code>tc netem</code>, and Git.</p>
 
 <!-- ============ 2 ============ -->
 <h1>2. System Architecture</h1>

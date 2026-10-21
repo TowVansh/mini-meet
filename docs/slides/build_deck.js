@@ -29,7 +29,7 @@ const pres = new pptxgen();
 pres.layout = "LAYOUT_WIDE"; // 13.333 x 7.5 in
 pres.theme = { headFontFace: THEME.headFontFace, bodyFontFace: THEME.bodyFontFace };
 pres.title = "Mini-Meet: real-time video conferencing in C";
-pres.subject = "Computer Networks course project 16 (also covers project 11)";
+pres.subject = "Computer Networks course project 16: video conferencing application";
 const C = pres.SchemeColor;
 const S = pres.shapes;
 
@@ -93,7 +93,7 @@ pres.addSection({ title: "Overview" });
 let s = pres.addSlide({ masterName: "TITLE_DARK", sectionTitle: "Overview" });
 s.addText("Mini-Meet", { placeholder: "title" });
 s.addText("Real-time video calls written in C: our own signalling, NAT traversal, RTP media engine, jitter buffer, rate control and end-to-end encryption", { placeholder: "body" });
-text(s, "COMPUTER NETWORKS · PROJECT 16 · ALSO COVERS PROJECT 11", { x: 0.8, y: 1.55, w: 8, h: 0.4, fontSize: 14, bold: true, color: C.accent1, charSpacing: 1 });
+text(s, "COMPUTER NETWORKS · PROJECT 16 · VIDEO CONFERENCING APPLICATION", { x: 0.8, y: 1.55, w: 8, h: 0.4, fontSize: 14, bold: true, color: C.accent1, charSpacing: 1 });
 text(s, "Windows + Linux · C11 · FFmpeg · UDP sockets · tc netem · github.com/TowVansh/mini-meet", { x: 0.8, y: 6.55, w: 9, h: 0.35, fontSize: 13, color: C.accent5 });
 // motif: three call nodes (server + two peers)
 s.addShape(S.LINE, { x: 9.05, y: 2.55, w: 1.25, h: 1.6, line: { color: HEX.accent2, width: 2, dashType: "dash" }, objectName: id("net"), flipH: true });
@@ -104,19 +104,19 @@ s.addShape(S.OVAL, { x: 8.25, y: 4.05, w: 1.1, h: 1.1, fill: { color: C.accent1 
 s.addShape(S.OVAL, { x: 11.75, y: 4.05, w: 1.1, h: 1.1, fill: { color: C.accent1 }, line: { type: "none" }, objectName: id("node") });
 text(s, "server", { x: 9.8, y: 2.65, w: 1.5, h: 0.3, fontSize: 12, color: C.background2, align: "center" });
 text(s, "peer-to-peer media", { x: 9.1, y: 4.7, w: 2.9, h: 0.3, fontSize: 12, color: C.background2, align: "center" });
-s.addNotes("Mini-Meet is a 2 to 4 person video calling app we built in C from the socket level up. The server only introduces the peers; audio and video then go directly between them over UDP. It covers Project 16 and, as we will show, all deliverables of Project 11 as well.");
+s.addNotes("Mini-Meet is a 2 to 4 person video calling app we built in C from the socket level up. The server only introduces the peers; audio and video then go directly between them over UDP. We measured how the call degrades and adapts under emulated packet loss, jitter and bandwidth limits.");
 
 // ---------- 2. what we built ----------
 s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "Overview" });
-s.addText("Every deliverable of both briefs is working", { placeholder: "title" });
-text(s, "Project 16: video conferencing", { x: 0.6, y: 1.45, w: 5.7, h: 0.4, fontSize: 18, bold: true, color: C.text1 });
+s.addText("Every deliverable in the brief is working", { placeholder: "title" });
+text(s, "Deliverables", { x: 0.6, y: 1.45, w: 5.7, h: 0.4, fontSize: 18, bold: true, color: C.text1 });
 bullets(s, ["2–4 person audio + video call (VP8 + Opus)", "Custom signalling server and documented protocol", "STUN NAT traversal across separate networks", "Quality measured under loss, jitter, bandwidth caps", "Architecture: media path vs signalling path"], { x: 0.6, y: 1.9, w: 5.9, h: 2.1, fontSize: 15 });
-text(s, "Project 11: adaptive streaming", { x: 0.6, y: 4.05, w: 5.7, h: 0.4, fontSize: 18, bold: true, color: C.text1 });
-bullets(s, ["Live or recorded media over UDP", "Own framing layer: sequence numbers + timestamps", "Jitter buffer with measured playout smoothness", "Bitrate adaptation across changing conditions"], { x: 0.6, y: 4.5, w: 5.9, h: 1.7, fontSize: 15 });
-text(s, "Beyond the briefs: end-to-end encryption · Windows + Linux · 72 unit-test checks", { x: 0.6, y: 6.35, w: 6.2, h: 0.35, fontSize: 14, italic: true, color: C.accent1 });
+text(s, "Milestones", { x: 0.6, y: 4.05, w: 5.7, h: 0.4, fontSize: 18, bold: true, color: C.text1 });
+bullets(s, ["Signalling server and two-party media path", "NAT traversal and multi-party (mesh) topology", "Quality instrumentation and adaptation behaviour", "Impairment evaluation with tc netem, report"], { x: 0.6, y: 4.5, w: 5.9, h: 1.7, fontSize: 15 });
+text(s, "Also built: end-to-end encryption · adaptive jitter buffer · Windows + Linux · 72 unit-test checks", { x: 0.6, y: 6.35, w: 6.2, h: 0.35, fontSize: 14, italic: true, color: C.accent1 });
 s.addImage({ path: path.join(ROOT, "docs/img/app-window.png"), x: 6.85, y: 1.6, w: 5.85, h: 3.44, objectName: id("screenshot") });
 text(s, "Client window: own view (left), remote peer with live stats (path, safety code, RTT, loss, jitter, freezes)", { x: 6.85, y: 5.15, w: 5.85, h: 0.6, fontSize: 12, color: C.accent5 });
-s.addNotes("Left: the deliverables from the two briefs. Right: the actual client window. The overlay shows the selected network path, the encryption safety code, RTT, loss, jitter and freezes, measured live.");
+s.addNotes("Left: every deliverable and milestone from the project brief, all done. Right: the actual client window. The overlay shows the selected network path, the encryption safety code, RTT, loss, jitter and freezes, measured live.");
 
 // ---------- 3. architecture ----------
 pres.addSection({ title: "How it works" });
