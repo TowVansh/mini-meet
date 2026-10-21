@@ -13,6 +13,8 @@
 # Run as root (namespaces and tc need it), from Windows:
 #   wsl -d Ubuntu -u root -- bash /mnt/e/MiniMeet/bench/run-matrix.sh
 # Env: PROFILES="baseline loss5" ADAPT="0 1" DURATION=45 WARMUP=10 TAG=eval
+#      SCHEDULE="baseline:15 rate1m:20 ..." (changing conditions in one call; see below)
+#      EXTRA="--no-jb" (extra mm flags for every client, e.g. jitter buffer off)
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
@@ -49,22 +51,32 @@ ip netns exec mmA bin/mm-server "$PORT" > results/server.log 2>&1 &
 SERVER=$!
 sleep 0.5
 
+# SCHEDULE="baseline:15 rate2m:20 rate1m:20 rate500k:20 rate1m:20 baseline:20" runs ONE call
+# per adaptation setting while the network changes phase by phase (profile:seconds).
+[ -n "${SCHEDULE:-}" ] && PROFILES=schedule
+
 for profile in $PROFILES; do
   for adapt in $ADAPT; do
     run="${TAG}_${profile}_adapt${adapt}_p2"
     echo "=== $run"
+    if [ "$profile" = schedule ]; then plan="$SCHEDULE"; else plan="baseline:$WARMUP $profile:$DURATION"; fi
+    total=0; for ph in $plan; do total=$((total + ${ph#*:})); done
     impair clear
     flag=""; [ "$adapt" = "0" ] && flag="--no-adapt"
-    common="--room b-${profile}-${adapt} --test --no-stun --headless $flag --run $run"
-    ip netns exec mmA bin/mm --server 127.0.0.1:$PORT --name botA $common --duration $((WARMUP + DURATION + 2)) \
+    common="--room b-${profile}-${adapt} --test --no-stun --headless $flag ${EXTRA:-} --run $run"
+    ip netns exec mmA bin/mm --server 127.0.0.1:$PORT --name botA $common --duration $((total + 2)) \
       --csv "results/${run}__botA.csv" > "results/${run}__botA.log" 2>&1 &
     a=$!
     sleep 1
-    ip netns exec mmB bin/mm --server 10.10.0.1:$PORT --name botB $common --duration $((WARMUP + DURATION + 1)) \
+    ip netns exec mmB bin/mm --server 10.10.0.1:$PORT --name botB $common --duration $((total + 1)) \
       --csv "results/${run}__botB.csv" > "results/${run}__botB.log" 2>&1 &
     b=$!
-    sleep "$WARMUP"
-    impair "$profile"
+    rm -f "results/${run}.phases"
+    for ph in $plan; do               # each phase: apply, note the time (plot.py marks it), hold
+      impair "${ph%%:*}"
+      echo "$(date +%s%3N) ${ph%%:*}" >> "results/${run}.phases"
+      sleep "${ph#*:}"
+    done
     wait $a $b
     impair clear
     sleep 1

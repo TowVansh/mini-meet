@@ -110,6 +110,8 @@ typedef struct {
     AVCodecContext  *dec;
     int              stream;
     int              is_file;
+    int              paced;          /* file playback clock started */
+    int64_t          last_pts, base_us;
 } av_in_t;
 
 static int av_open(av_in_t *in, const char *format, const char *url, enum AVMediaType type, AVDictionary *opts) {
@@ -131,8 +133,23 @@ static int av_open(av_in_t *in, const char *format, const char *url, enum AVMedi
     in->is_file = format == NULL;
     return 0;
 fail:
+    if (in->dec) avcodec_free_context(&in->dec);
     avformat_close_input(&in->fmt);
     return -1;
+}
+
+/* A file decodes far faster than real time. Hold each decoded frame until its
+ * presentation time, so recorded media streams at normal speed (a camera or
+ * microphone is already paced by the device). */
+static void pace_file_frame(av_in_t *in, const AVFrame *f) {
+    int64_t pts = f->best_effort_timestamp, due;
+    if (pts == AV_NOPTS_VALUE) return;
+    pts = av_rescale_q(pts, in->fmt->streams[in->stream]->time_base, AV_TIME_BASE_Q);   /* microseconds */
+    if (!in->paced || pts < in->last_pts) in->base_us = (int64_t)now_us() - pts;    /* start, or the file looped */
+    in->paced = 1;
+    in->last_pts = pts;
+    due = in->base_us + pts;
+    while (g.running && (int64_t)now_us() < due) sleep_ms((unsigned)((due - (int64_t)now_us()) / 1000) + 1);
 }
 
 static void av_close(av_in_t *in) {
@@ -146,6 +163,7 @@ static int av_next(av_in_t *in, AVFrame *frame) {
     int ret = -1;
     while (g.running) {
         if (avcodec_receive_frame(in->dec, frame) == 0) {
+            if (in->is_file) pace_file_frame(in, frame);
             ret = 0;
             break;
         }
@@ -190,7 +208,12 @@ static int find_device(enum AVMediaType want, char *out, size_t cap) {
 static int open_camera(av_in_t *in) {
     char dev[300], url[320];
     AVDictionary *o = NULL;
-    if (g.file_src[0]) return av_open(in, NULL, g.file_src, AVMEDIA_TYPE_VIDEO, NULL);
+    if (g.file_src[0]) {
+        if (av_open(in, NULL, g.file_src, AVMEDIA_TYPE_VIDEO, NULL) != 0) return -1;
+        log_msg("video", "recorded file: %s (%dx%d %s, streamed in real time, looped)", g.file_src, in->dec->width,
+                in->dec->height, avcodec_get_name(in->dec->codec_id));
+        return 0;
+    }
     if (g.video_dev[0]) snprintf(dev, sizeof dev, "%s", g.video_dev);
     else if (find_device(AVMEDIA_TYPE_VIDEO, dev, sizeof dev) != 0) return -1;
     av_dict_set(&o, "video_size", "640x480", 0);
@@ -211,7 +234,11 @@ ok:
 
 static int open_mic(av_in_t *in) {
     char dev[300], url[320];
-    if (g.file_src[0]) return av_open(in, NULL, g.file_src, AVMEDIA_TYPE_AUDIO, NULL);
+    if (g.file_src[0]) {
+        if (av_open(in, NULL, g.file_src, AVMEDIA_TYPE_AUDIO, NULL) != 0) return -1;
+        log_msg("audio", "recorded file: %s (%d Hz %s)", g.file_src, in->dec->sample_rate, avcodec_get_name(in->dec->codec_id));
+        return 0;
+    }
     if (g.audio_dev[0]) snprintf(dev, sizeof dev, "%s", g.audio_dev);
     else if (find_device(AVMEDIA_TYPE_AUDIO, dev, sizeof dev) != 0) return -1;
 #ifdef _WIN32

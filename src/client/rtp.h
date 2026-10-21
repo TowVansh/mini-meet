@@ -97,4 +97,31 @@ void rx_stats_update(rx_stats_t *s, uint16_t seq, uint32_t rtp_ts, uint64_t arri
 /* Fills a report block and advances the "prior" counters (one call per report). */
 void rx_stats_block(rx_stats_t *s, uint64_t now_us, rtcp_block_t *b);
 
+/* Jitter-buffer playout clock (timestamp-driven playout).
+ * Every arriving packet gives offset = arrival time - media time (its RTP
+ * timestamp in microseconds). Media time T then plays at T + the 95th
+ * percentile of the recent offsets, so about 95 % of packets are already
+ * there when their turn comes and playout follows the sender's pace, not the
+ * network's. The buffer delay grows with jitter and shrinks when it calms
+ * down, within about one window of packets. */
+#define PLAYOUT_WINDOW 64
+typedef struct {
+    int      init;
+    uint32_t last_ts;
+    int64_t  ext_ts;                 /* last timestamp, unwrapped to 64 bits */
+    double   offs[PLAYOUT_WINDOW];   /* recent arrival - media time, microseconds */
+    int      n, pos;
+    double   delay_us;               /* 95th percentile offset: when media time is due */
+    double   min_us;                 /* smallest recent offset (the fastest packet) */
+    int      min_only;               /* 1 = no jitter allowance: play at the fastest packet's pace
+                                        (buffer off, for comparison: --no-jb) */
+} playout_t;
+
+void     playout_reset(playout_t *po);
+void     playout_add(playout_t *po, uint32_t ts, uint32_t clock_rate, uint64_t arrival_us);
+/* Local time at which media timestamp ts should be played (0 = no data yet: play now). */
+uint64_t playout_due_us(const playout_t *po, uint32_t ts, uint32_t clock_rate);
+/* Extra delay the buffer adds over the fastest packet, in ms. */
+double   playout_buffer_ms(const playout_t *po);
+
 #endif

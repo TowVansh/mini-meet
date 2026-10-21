@@ -1,57 +1,10 @@
-04:05:28 [server] Mini-Meet signalling server listening on TCP 9300 (protocol v1)
-04:05:29 [room] join room=b-baseline-1 id=2d5c1f25 name=botA from=127.0.0.1:39040 (1/4)
-04:05:30 [room] join room=b-baseline-1 id=79a5e759 name=botB from=10.10.0.2:44382 (2/4)
-04:06:26 [room] leave room=b-baseline-1 id=2d5c1f25 name=botA
-04:06:26 [room] leave room=b-baseline-1 id=79a5e759 name=botB
-04:06:27 [room] join room=b-loss1-1 id=6c9a1a3e name=botA from=127.0.0.1:57634 (1/4)
-04:06:28 [room] join room=b-loss1-1 id=d46477d0 name=botB from=10.10.0.2:44696 (2/4)
-04:07:24 [room] leave room=b-loss1-1 id=6c9a1a3e name=botA
-04:07:24 [room] leave room=b-loss1-1 id=d46477d0 name=botB
-04:07:25 [room] join room=b-loss5-1 id=0955097f name=botA from=127.0.0.1:60008 (1/4)
-04:07:26 [room] join room=b-loss5-1 id=a72d1502 name=botB from=10.10.0.2:45400 (2/4)
-04:08:22 [room] leave room=b-loss5-1 id=a72d1502 name=botB
-04:08:22 [room] leave room=b-loss5-1 id=0955097f name=botA
-04:08:24 [room] join room=b-loss10-1 id=b427af44 name=botA from=127.0.0.1:58710 (1/4)
-04:08:25 [room] join room=b-loss10-1 id=782efbc3 name=botB from=10.10.0.2:51228 (2/4)
-04:09:21 [room] leave room=b-loss10-1 id=b427af44 name=botA
-04:09:21 [room] leave room=b-loss10-1 id=782efbc3 name=botB
-04:09:22 [room] join room=b-loss20-1 id=4d8fc568 name=botA from=127.0.0.1:45622 (1/4)
-04:09:23 [room] join room=b-loss20-1 id=117160d9 name=botB from=10.10.0.2:48690 (2/4)
-04:10:19 [room] leave room=b-loss20-1 id=117160d9 name=botB
-04:10:19 [room] leave room=b-loss20-1 id=4d8fc568 name=botA
-04:10:20 [room] join room=b-burst5-1 id=902193ec name=botA from=127.0.0.1:47094 (1/4)
-04:10:21 [room] join room=b-burst5-1 id=e9d41a82 name=botB from=10.10.0.2:40764 (2/4)
-04:11:17 [room] leave room=b-burst5-1 id=902193ec name=botA
-04:11:17 [room] leave room=b-burst5-1 id=e9d41a82 name=botB
-04:11:18 [room] join room=b-delay100-1 id=3a0997c0 name=botA from=127.0.0.1:41722 (1/4)
-04:11:19 [room] join room=b-delay100-1 id=16c3e4b8 name=botB from=10.10.0.2:56010 (2/4)
-04:12:15 [room] leave room=b-delay100-1 id=3a0997c0 name=botA
-04:12:16 [room] leave room=b-delay100-1 id=16c3e4b8 name=botB
-04:12:16 [room] join room=b-jitter30-1 id=20cee3d2 name=botA from=127.0.0.1:35032 (1/4)
-04:12:17 [room] join room=b-jitter30-1 id=6a2f6c88 name=botB from=10.10.0.2:54602 (2/4)
-04:13:13 [room] leave room=b-jitter30-1 id=20cee3d2 name=botA
-04:13:14 [room] leave room=b-jitter30-1 id=6a2f6c88 name=botB
-04:13:15 [room] join room=b-jitter60-1 id=707bc5b7 name=botA from=127.0.0.1:43134 (1/4)
-04:13:16 [room] join room=b-jitter60-1 id=11691bf1 name=botB from=10.10.0.2:58190 (2/4)
-04:14:12 [room] leave room=b-jitter60-1 id=707bc5b7 name=botA
-04:14:12 [room] leave room=b-jitter60-1 id=11691bf1 name=botB
-04:14:13 [room] join room=b-rate2m-1 id=70f37dba name=botA from=127.0.0.1:54852 (1/4)
-04:14:14 [room] join room=b-rate2m-1 id=f7c27118 name=botB from=10.10.0.2:59090 (2/4)
-04:15:10 [room] leave room=b-rate2m-1 id=70f37dba name=botA
-04:15:10 [room] leave room=b-rate2m-1 id=f7c27118 name=botB
-04:15:11 [room] join room=b-rate1m-1 id=85c490e8 name=botA from=127.0.0.1:34148 (1/4)
-04:15:12 [room] join room=b-rate1m-1 id=eceafb84 name=botB from=10.10.0.2:51968 (2/4)
-04:16:08 [room] leave room=b-rate1m-1 id=85c490e8 name=botA
-04:16:08 [room] leave room=b-rate1m-1 id=eceafb84 name=botB
-04:16:09 [room] join room=b-rate500k-1 id=c0de6b69 name=botA from=127.0.0.1:56450 (1/4)
-04:16:10 [room] join room=b-rate500k-1 id=bbdafbb0 name=botB from=10.10.0.2:47450 (2/4)
-04:17:06 [room] leave room=b-rate500k-1 id=bbdafbb0 name=botB
-04:17:06 [room] leave room=b-rate500k-1 id=c0de6b69 name=botA
-04:17:08 [room] join room=b-rate250k-1 id=713db526 name=botA from=127.0.0.1:41782 (1/4)
-04:17:09 [room] join room=b-rate250k-1 id=34bbcbaa name=botB from=10.10.0.2:40474 (2/4)
-04:18:05 [room] leave room=b-rate250k-1 id=34bbcbaa name=botB
-04:18:05 [room] leave room=b-rate250k-1 id=713db526 name=botA
-04:18:06 [room] join room=b-combo-1 id=f41b04ed name=botA from=127.0.0.1:43940 (1/4)
-04:18:07 [room] join room=b-combo-1 id=045b3b6e name=botB from=10.10.0.2:46464 (2/4)
-04:19:03 [room] leave room=b-combo-1 id=f41b04ed name=botA
-04:19:03 [room] leave room=b-combo-1 id=045b3b6e name=botB
+16:55:35 [server] Mini-Meet signalling server listening on TCP 9300 (protocol v1)
+16:55:35 [room] join room=b-schedule-0 id=8bc3b89a name=botA from=127.0.0.1:34906 (1/4)
+16:55:36 [room] join room=b-schedule-0 id=66c058b2 name=botB from=10.10.0.2:34584 (2/4)
+16:56:54 [server] timeout id=66c058b2
+16:56:54 [room] leave room=b-schedule-0 id=66c058b2 name=botB
+16:57:44 [room] leave room=b-schedule-0 id=8bc3b89a name=botA
+16:57:45 [room] join room=b-schedule-1 id=d713e579 name=botA from=127.0.0.1:45422 (1/4)
+16:57:46 [room] join room=b-schedule-1 id=dc2e8447 name=botB from=10.10.0.2:47560 (2/4)
+16:59:52 [room] leave room=b-schedule-1 id=dc2e8447 name=botB
+16:59:52 [room] leave room=b-schedule-1 id=d713e579 name=botA

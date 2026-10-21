@@ -211,6 +211,50 @@ void rx_stats_update(rx_stats_t *s, uint16_t seq, uint32_t rtp_ts, uint64_t arri
     s->have_transit = 1;
 }
 
+void playout_reset(playout_t *po) {
+    memset(po, 0, sizeof *po);
+}
+
+static int64_t unwrap_ts(const playout_t *po, uint32_t ts) {
+    /* RTP timestamps are 32 bits and wrap; differences up to 2^31 are unambiguous. */
+    return po->init ? po->ext_ts + (int32_t)(ts - po->last_ts) : (int64_t)ts;
+}
+
+static double media_us(int64_t ext_ts, uint32_t clock_rate) {
+    return (double)ext_ts * 1e6 / (double)clock_rate;
+}
+
+void playout_add(playout_t *po, uint32_t ts, uint32_t clock_rate, uint64_t arrival_us) {
+    double sorted[PLAYOUT_WINDOW];
+    int64_t ext = unwrap_ts(po, ts);
+    int i, j;
+    po->ext_ts = ext;
+    po->last_ts = ts;
+    po->init = 1;
+    po->offs[po->pos] = (double)arrival_us - media_us(ext, clock_rate);
+    po->pos = (po->pos + 1) % PLAYOUT_WINDOW;
+    if (po->n < PLAYOUT_WINDOW) po->n++;
+    /* insertion sort of at most 64 values: cheap at packet rate */
+    for (i = 0; i < po->n; i++) {
+        double v = po->offs[i];
+        for (j = i; j > 0 && sorted[j - 1] > v; j--) sorted[j] = sorted[j - 1];
+        sorted[j] = v;
+    }
+    po->min_us = sorted[0];
+    po->delay_us = sorted[(int)(0.95 * (po->n - 1) + 0.5)];
+}
+
+uint64_t playout_due_us(const playout_t *po, uint32_t ts, uint32_t clock_rate) {
+    double due;
+    if (!po->init || po->n == 0) return 0;
+    due = media_us(unwrap_ts(po, ts), clock_rate) + (po->min_only ? po->min_us : po->delay_us);
+    return due > 0 ? (uint64_t)due : 0;
+}
+
+double playout_buffer_ms(const playout_t *po) {
+    return po->n && !po->min_only ? (po->delay_us - po->min_us) / 1000.0 : 0;
+}
+
 void rx_stats_block(rx_stats_t *s, uint64_t now_us, rtcp_block_t *b) {
     uint32_t ext_max = s->cycles + s->max_seq;
     uint32_t expected = ext_max - s->base_seq + 1;

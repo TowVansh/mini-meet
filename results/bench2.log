@@ -1,0 +1,14 @@
+=== eval_rate2m_adapt0_p2
+=== eval_rate2m_adapt1_p2
+=== eval_rate1m_adapt0_p2
+=== eval_rate1m_adapt1_p2
+=== eval_rate500k_adapt0_p2
+=== eval_rate500k_adapt1_p2
+=== eval_rate250k_adapt0_p2
+=== eval_rate250k_adapt1_p2
+=== eval_combo_adapt0_p2
+=== eval_combo_adapt1_p2
+Done. Next: python3 analysis/plot.py results/eval_*.csv
+=== eval_schedule_adapt0_p2
+=== eval_schedule_adapt1_p2
+Done. Next: python3 analysis/plot.py results/eval_*.csv

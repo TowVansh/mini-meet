@@ -48,6 +48,8 @@ Error codes: `BAD_MESSAGE`, `BAD_NAME`, `TOO_LARGE`, `ROOM_FULL`, `NOT_JOINED`, 
 
 The server closes any connection that has sent nothing for **20 s**. Clients PING every 5 s, so only dead clients (lost network, crashed process) time out, and their peers get `PEER_LEFT`.
 
+A client does not trust `PEER_LEFT` alone. If media from that peer is still arriving, its PINGs were probably just stuck in the same congested queue, so the client keeps the peer until its packets stop for 3 s. Media liveness also works without the server: a connected peer that sends nothing for 30 s is removed. STUN keepalives answer every 2.5 s, so an idle but alive peer is never removed. (Found in testing: under 15 s of bufferbloat the server timed a peer out and the call was torn down although the network had recovered.)
+
 ### Call setup sequence (C joins a room holding A)
 
 ```
@@ -100,6 +102,27 @@ STUN, RTP and RTCP share **one UDP socket**, demultiplexed by the first byte (RF
 | 96 | VP8 | 90 kHz | 1-byte descriptor first: bit 7 `S` = start of frame, bit 6 `K` = keyframe. `M` = last packet of the frame. Payload ≤ 1160 bytes. |
 | 97 | VP8 retransmission | 90 kHz | Same bytes as the original (same seq), only the PT differs |
 | 111 | Opus | 48 kHz | One 20 ms frame per packet, mono, 32 kbps, in-band FEC |
+
+**Field rules (sender)**
+
+- **SSRC**: random 32-bit value per stream (video and audio each have their own), chosen at start-up.
+- **Sequence number**: starts at a random value and goes up by 1 for every packet of that stream (wraps at 65535). Retransmissions reuse the original number.
+- **Timestamp**: media time, not send time. Video uses a 90 kHz clock taken at capture, and every packet of one frame shares it. Audio adds 960 (20 ms at 48 kHz) per packet, so a missing packet's timestamp can be worked out from its sequence number.
+- **Framing**: a video frame is split into payloads of at most 1160 bytes. The first carries `S`, the last carries the marker bit `M`, so the receiver can tell when a frame is complete.
+
+### Receiver rules: jitter buffer and loss concealment
+
+| Step | Rule (`src/client/media_out.c`, playout clock in `rtp.c`) |
+|---|---|
+| Loss detection | A gap in sequence numbers marks the missing packets. After a reordering wait (about 2 × jitter, 5–80 ms) they are NACKed. |
+| Playout clock | For each packet, offset = arrival time − media time (timestamp in µs). The **95th percentile** of the last 64 offsets says when media time T is due: T + p95. The buffer delay therefore grows with network jitter and shrinks when it calms down. |
+| Video playout | A frame is decoded only when complete **and** due, so frames are shown at the sender's 20 fps spacing instead of the network's uneven arrival times. |
+| Video concealment | If a hole is not repaired within max(120 ms, 1.5 × RTT + 40 ms), the frame is skipped and a keyframe is requested (PLI). Until it arrives the last good picture stays on screen (a freeze). |
+| Audio playout | One 20 ms frame is due every 20 ms of media time, plus a 25 ms margin. |
+| Audio concealment | A frame that is missing when due is rebuilt from the next packet's in-band **FEC** if that has arrived, otherwise Opus **PLC** extrapolates it. A packet that arrives after its frame was played is dropped as late (but still updates the playout clock). |
+| Measured | Per second, in each client's CSV: `playout_sd_ms` (spread of the intervals between shown frames = playout smoothness), `jb_delay_ms` (delay the buffer adds), `freeze_count`, `concealed_pct`. |
+
+`--no-jb` turns the jitter allowance off: playout then follows the fastest packet, which is used to measure what the buffer buys (EVALUATION.md).
 
 ### RTCP
 

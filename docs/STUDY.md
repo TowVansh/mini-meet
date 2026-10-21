@@ -194,6 +194,16 @@ How to use this guide: go through the parts in order. For each topic, learn the 
 - Freeze = a frame gap longer than max(3 × average, average + 150 ms).
 - IntServ/DiffServ (theory): DSCP marking (EF for voice). We don't mark packets.
 
+### 4.9b ★ Jitter buffer and playout (`rtp.c` `playout_*`, `media_out.c`)
+- Problem: packets leave every 20 ms (audio) or 50 ms (video) but arrive unevenly (jitter). Playing them on arrival gives choppy output.
+- Playout clock: offset = arrival − media time (RTP timestamp → µs). Due time of media time T = T + **p95(last 64 offsets)**.
+- Trade-off: a bigger buffer means smoother playout but more delay. p95 accepts ~5 % late packets (FEC/PLC hide them) instead of waiting for the worst one.
+- Adapts by itself: clean link ≈ 0–5 ms buffer; ±30 ms jitter ≈ 140 ms; ±60 ms ≈ 220 ms.
+- Video: a frame is decoded only when complete **and** due. Audio: one frame due per 20 ms + 25 ms margin (so the FEC packet is there).
+- Late packet = arrived after its turn → dropped, but it still updates the clock (so the buffer grows).
+- Measured: `playout_sd_ms` (spread of frame intervals), `jb_delay_ms`, freezes, concealment. Buffer off (`--no-jb`) vs on is in EVALUATION.md.
+- Q: Why not just a fixed 60 ms buffer? (Too small for ±60 ms jitter, so most audio would be late; too big for a clean LAN, which wastes latency.)
+
 ### 4.10 RPC / SCTP (only compare)
 - Our signalling is request/response plus events over TCP. RPC hides network calls behind function calls.
 - SCTP: message-oriented, multi-stream (no head-of-line blocking between streams). WebRTC data channels use it (our v1).
@@ -242,9 +252,11 @@ How to use this guide: go through the parts in order. For each topic, learn the 
 
 - 2 peers, clean: 1200 kbps, 640×480, 20 fps, RTT < 1 ms.
 - 4-peer mesh: all 12 streams at 640×480, 20 fps (each client uploads 3 copies, ~3.6 Mbit/s).
-- Random loss ≤ 5 %: NACK + FEC hide it (no freezes, 0.3 % audio concealed). At 20 % loss: 39 freezes (15 with adaptation).
-- **1 Mbit/s link without adaptation: RTT 10.8 s, 14 % loss, 31 % audio concealed (bufferbloat). With adaptation: ~200 kbps, 20 fps, RTT 3 ms, 0 % loss.**
-- 500 kbit/s: fixed rate gives 0 fps and RTT 19 s. Adaptive gives 20 fps and RTT 16 ms. Combo: fixed 0 fps, adaptive 20 fps.
+- Random loss ≤ 5 %: NACK + FEC hide it (no freezes, ≤ 0.4 % audio concealed). At 20 % loss: 23 freezes (15 with adaptation).
+- **1 Mbit/s link without adaptation: RTT 10.5 s, 14 % loss, 34 % audio concealed (bufferbloat). With adaptation: ~200 kbps, 20 fps, RTT 3 ms, 0 % loss.**
+- **Jitter buffer, ±30 ms jitter: off = 88 % audio concealed, on = 0.1 % (cost: ~140 ms extra delay). ±60 ms: off 84 %, 13 freezes; on 0.2 %, 4 freezes (~220 ms).**
+- Changing conditions (2 → 1 → 0.5 → 1 Mbit/s → clean in one call): the adaptive sender follows every step; the fixed one reaches 14 s RTT and 0 fps.
+- 500 kbit/s: fixed rate gives 0 fps and RTT 19 s. Adaptive gives 20 fps and RTT 10 ms. Combo: fixed 0 fps, adaptive 20 fps.
 - Controller weaknesses: over-reacts to random loss and jitter (thinks they mean congestion). At 250 kbit/s it reacts in 2.5 s (feedback starvation) but cannot drain netem's huge queue in time (bufferbloat needs AQM in the network).
 - Bug found by testing: without a windowed minimum RTT, a fixed +100 ms delay was treated as congestion forever.
 - Real NAT demo: college Wi-Fi ↔ mobile hotspot, `srflx->srflx`, RTT median 85 ms, spikes to 1.15 s on the hotspot uplink.

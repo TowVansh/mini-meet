@@ -79,7 +79,7 @@ The source address then identifies which peer the packet came from.
 ## Media path
 
 ```
-camera --FFmpeg--> I420 --libswscale--> ladder resolution --libvpx VP8 (CBR, realtime)--> frame
+camera or recorded file (paced by its timestamps) --FFmpeg--> I420 --libswscale--> ladder resolution --libvpx VP8 (CBR, realtime)--> frame
 frame --split into <=1160-byte payloads--> [RTP hdr | 1-byte descriptor (S,K) | VP8 data] --UDP--> each peer
 
 mic --FFmpeg--> PCM --libswresample--> 48 kHz mono --libopus (32 kbps, 20 ms, in-band FEC)--> [RTP hdr | Opus] --UDP-->
@@ -96,10 +96,12 @@ mic --FFmpeg--> PCM --libswresample--> 48 kHz mono --libopus (32 kbps, 20 ms, in
 |---|---|
 | **Sequence gap → NACK** | A jump in sequence numbers immediately puts the missing numbers on a NACK list. A generic NACK (RTCP 205/1, packet ID + 16-bit bitmask) is resent every 1.5×RTT, up to 4 tries. |
 | **Retransmission** | The sender keeps the last 1024 video packets. On NACK it resends them with **PT 97**, so the receiver can keep them out of loss and jitter statistics. Statistics then show network loss before repair, not after. |
-| **Video jitter buffer** | Packets go into a ring indexed by `seq % 1024`. A frame is decoded only when every packet from `S` to marker is present. If a hole is not filled within max(120 ms, 2.5×RTT + 30 ms), the frame is skipped. |
+| **Playout clock** (`rtp.c` `playout_*`) | Each packet gives offset = arrival time − media time. Media time T is due at T + the **95th percentile** of the last 64 offsets, so about 95 % of packets are there in time and playout runs at the sender's pace. The delay adapts to jitter by itself (a few ms on a clean link, ~140–220 ms under ±30–60 ms jitter). `--no-jb` turns the allowance off for comparison. |
+| **Video jitter buffer** | Packets go into a ring indexed by `seq % 1024`. A frame is decoded when every packet from `S` to marker is present **and** the playout clock says it is due. If a hole is not filled within max(120 ms, 1.5×RTT + 40 ms), the frame is skipped. |
 | **PLI** | After a skip or a decode error, later frames reference missing data, so the receiver drops frames until a keyframe arrives and sends a PLI (RTCP 206/1) to request one (rate-limited to one per 300 ms). |
 | **Freeze count** | A gap between rendered frames longer than max(3×average, average + 150 ms), the same rule WebRTC's stats use. |
-| **Audio jitter buffer** | 60 ms target delay, one Opus frame per 20 ms. When a frame is lost, it is rebuilt from the **in-band FEC** in the next packet if that has arrived, otherwise Opus **PLC** extrapolates it. Playout jumps forward if the buffer grows, and restarts with more delay if packets keep arriving after their playout time (adaptive playout). |
+| **Audio jitter buffer** | One Opus frame is due per 20 ms of media time on the playout clock, plus a 25 ms margin. When a frame is missing at its due time, it is rebuilt from the **in-band FEC** in the next packet if that has arrived, otherwise Opus **PLC** extrapolates it. Packets that arrive after their frame was played are dropped as late, but still teach the playout clock that the delay has grown. |
+| **Playout smoothness** (measured) | Per second: spread (standard deviation) of the intervals between shown frames, the buffer delay, freezes and audio concealment, all in the CSV. |
 
 ## RTCP and measurement
 

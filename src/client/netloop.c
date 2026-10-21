@@ -7,6 +7,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 peer_t *peer_find(const char *id) {
     int i;
@@ -166,7 +167,7 @@ static void on_rtcp(peer_t *p, const uint8_t *buf, size_t len, uint64_t now_us) 
 /* ---- statistics ---- */
 
 static void csv_row(peer_t *p, const char *kind, const char *dir, double kbps, double loss, double jitter,
-                    int fps, int w, int h, double conceal, int freezes) {
+                    int fps, int w, int h, double conceal, int freezes, double playout_sd, double jb_ms) {
     char ct[24];
     if (!g.csv) return;
     snprintf(ct, sizeof ct, "%s->%s", p->ltype, p->rtype);
@@ -180,7 +181,11 @@ static void csv_row(peer_t *p, const char *kind, const char *dir, double kbps, d
     else fputc(',', g.csv);
     if (freezes >= 0) fprintf(g.csv, "%d,", freezes);
     else fputc(',', g.csv);
-    fprintf(g.csv, "%d,%d,%s\n", g.adapt, g.enc_level, ct);
+    fprintf(g.csv, "%d,%d,%s,", g.adapt, g.enc_level, ct);
+    if (playout_sd >= 0) fprintf(g.csv, "%.1f", playout_sd);
+    fputc(',', g.csv);
+    if (jb_ms >= 0) fprintf(g.csv, "%.1f", jb_ms);
+    fputc('\n', g.csv);
 }
 
 static double interval_loss(rx_stats_t *s, uint32_t *exp_prior, uint32_t *rec_prior) {
@@ -200,8 +205,14 @@ static void stats_tick(double secs) {
     int i;
     for (i = 0; i < MAX_PEERS; i++) {
         peer_t *p = &g.peers[i];
-        double vin, ain, vout, aout, lv, la, conc;
+        double vin, ain, vout, aout, lv, la, conc, psd = -1, vjb, ajb;
         if (!p->used || p->ice_state != ICE_CONNECTED) continue;
+        if (p->pi_n > 1) {
+            double mean = p->pi_sum / p->pi_n, var = p->pi_sumsq / p->pi_n - mean * mean;
+            psd = var > 0 ? sqrt(var) : 0;
+        }
+        vjb = playout_buffer_ms(&p->vpo);
+        ajb = playout_buffer_ms(&p->apo) + AUDIO_MARGIN_US / 1000.0;
         vin = p->rx_bytes_v * 8 / 1000.0 / secs;
         ain = p->rx_bytes_a * 8 / 1000.0 / secs;
         vout = p->tx_bytes_v * 8 / 1000.0 / secs;
@@ -213,20 +224,22 @@ static void stats_tick(double secs) {
         p->lost_pct_a = la;
 
         csv_row(p, "video", "in", vin, lv, p->rxv.jitter / 90.0, (int)(p->frames_decoded / secs + 0.5), p->disp_w,
-                p->disp_h, -1, p->freezes);
-        csv_row(p, "audio", "in", ain, la, p->rxa.jitter / 48.0, -1, 0, 0, conc, -1);
-        csv_row(p, "video", "out", vout, p->rloss_v * 100, p->rjitter_v_ms, -1, 0, 0, -1, -1);
-        csv_row(p, "audio", "out", aout, p->rloss_a * 100, p->rjitter_a_ms, -1, 0, 0, -1, -1);
+                p->disp_h, -1, p->freezes, psd, vjb);
+        csv_row(p, "audio", "in", ain, la, p->rxa.jitter / 48.0, -1, 0, 0, conc, -1, -1, ajb);
+        csv_row(p, "video", "out", vout, p->rloss_v * 100, p->rjitter_v_ms, -1, 0, 0, -1, -1, -1, -1);
+        csv_row(p, "audio", "out", aout, p->rloss_a * 100, p->rjitter_a_ms, -1, 0, 0, -1, -1, -1, -1);
 
         if (g.headless || (now_ms() / 1000) % 5 == 0)
-            log_msg("stats", "%-8s %s->%s rtt %4.0fms | in v %4.0fkbps %2.0ffps %dx%d loss %4.1f%% jit %3.0fms frz %d nack %d rtx %d | a conceal %4.1f%% fec %d | out %4.0fkbps lvl %d%s",
+            log_msg("stats", "%-8s %s->%s rtt %4.0fms | in v %4.0fkbps %2.0ffps %dx%d loss %4.1f%% jit %3.0fms frz %d nack %d rtx %d | a conceal %4.1f%% fec %d | out %4.0fkbps lvl %d | jb v %.0fms a %.0fms playout-sd %.1fms late %d%s",
                     p->name, p->ltype, p->rtype, p->rtt_ms, vin, p->frames_decoded / secs, p->disp_w, p->disp_h, lv,
                     p->rxv.jitter / 90.0, p->freezes, p->nack_sent, p->rtx_recv, conc, p->afec, vout + aout, g.enc_level,
-                    p->bad_auth ? " AUTH-FAIL" : "");
+                    vjb, ajb, psd < 0 ? 0 : psd, p->alate, p->bad_auth ? " AUTH-FAIL" : "");
 
         p->rx_bytes_v = p->rx_bytes_a = p->tx_bytes_v = p->tx_bytes_a = 0;
         p->frames_decoded = p->nack_sent = p->rtx_recv = p->plis_sent = 0;
-        p->aframes = p->aconcealed = p->afec = 0;
+        p->aframes = p->aconcealed = p->afec = p->alate = 0;
+        p->pi_sum = p->pi_sumsq = 0;
+        p->pi_n = 0;
         p->bad_auth = 0;
     }
     if (g.csv) fflush(g.csv);
@@ -306,6 +319,13 @@ static int net_thread(void *arg) {
             if (!p->used) continue;
             ice_tick(p, now);
             if (p->ice_state == ICE_CONNECTED) rx_tick(p, now_us());
+            /* Media liveness, independent of the server: STUN keepalives answer
+             * every 2.5 s, so long silence means the peer is gone. */
+            if (p->ice_state == ICE_CONNECTED &&
+                now - p->last_rx_ms > (p->left_pending ? PEER_SILENCE_LEFT_MS : PEER_SILENCE_MS)) {
+                log_msg("peer", "%s: no packets for %d s, removing", p->name, (int)((now - p->last_rx_ms) / 1000));
+                peer_remove(p);
+            }
         }
         if (now - last_rtcp >= 1000) {
             last_rtcp = now;

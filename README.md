@@ -14,6 +14,7 @@ Course project 16, Computer Networks (CO4, CO5; Modules 4 and 5).
 | [docs/VIVA_NOTES.md](docs/VIVA_NOTES.md) | Likely viva questions with answers |
 | [docs/CODE_TOUR.md](docs/CODE_TOUR.md) | Which file and function to open for each review question |
 | [docs/STUDY.md](docs/STUDY.md) | Syllabus-ordered study guide |
+| [docs/PROJECT11.md](docs/PROJECT11.md) | Checklist: how Mini-Meet also covers Project 11 (adaptive streaming) |
 
 ## Build
 
@@ -38,9 +39,10 @@ make && make test
 bin/mm-server                                   # signalling server, TCP 9000
 bin/mm --server 127.0.0.1 --room demo --name Alice             # webcam + mic
 bin/mm --server 127.0.0.1 --room demo --name Bob --test        # test pattern + tone
+bin/mm --server 127.0.0.1 --room demo --name Cara --file media/sample.mp4   # recorded media (looped)
 ```
 
-Up to 4 clients per room. On another PC, use `--server <server-ip>`. Keys in the window: **M** mute, **V** camera off, **S** stats overlay, **Q** quit. Run `bin/mm --list-devices` to see cameras and microphones, then choose with `--video-dev "..." --audio-dev "..."`.
+Up to 4 clients per room. On another PC, use `--server <server-ip>`. Keys in the window: **M** mute, **V** camera off, **S** stats overlay, **F** mirror, **Q** quit. Run `bin/mm --list-devices` to see cameras and microphones, then choose with `--video-dev "..." --audio-dev "..."`.
 
 Each remote tile shows the selected candidate pair (`host->host`, `srflx->srflx`), RTT, resolution, loss, jitter, freezes and the loss the other side reports. Add `--csv stats.csv` to log every second.
 
@@ -52,6 +54,10 @@ Windows Firewall asks the first time `mm.exe` / `mm-server.exe` run. Allow both,
 # from Windows; tc netem needs root inside WSL
 wsl -d Ubuntu -u root -- bash /mnt/e/MiniMeet/bench/run-matrix.sh
 python3 analysis/plot.py results/eval_*.csv     # summary.md + graphs in results/
+# changing network conditions in one call (bitrate adaptation demo), jitter buffer off for comparison
+wsl -d Ubuntu -u root -- bash -c 'cd /mnt/e/MiniMeet && SCHEDULE="baseline:15 rate2m:20 rate1m:20 rate500k:20 rate1m:20 baseline:20" TAG=eval bash bench/run-matrix.sh'
+wsl -d Ubuntu -u root -- bash -c 'cd /mnt/e/MiniMeet && PROFILES="jitter30 jitter60" EXTRA=--no-jb TAG=nojb bash bench/run-matrix.sh'
+python3 analysis/compare.py results/nojb_*.csv   # table only, does not overwrite the main graphs
 ```
 
 `sudo scripts/impair.sh <profile>` applies a single impairment by hand (`scripts/impair.sh list` shows the profiles).
@@ -63,7 +69,8 @@ src/common/   portable sockets (Winsock/POSIX), clock, signalling line protocol
 src/server/   mm-server
 src/stun/     STUN encode/decode + mm-stun server
 src/client/   mm: ICE, RTP/RTCP, jitter buffers, codecs, rate control, SDL UI
-tests/        unit tests (protocol parsing, STUN, RTP/RTCP, receiver stats, controller)
+tests/        unit tests (protocol parsing, STUN, RTP/RTCP, receiver stats, jitter buffer, controller, crypto)
+media/        sample.mp4: a 20 s recorded clip for --file streaming
 bench/        netem impairment matrix
 analysis/     summary + plots
 results/      measurement data (results/v1 = WebRTC prototype)

@@ -30,7 +30,11 @@
 #define AUDIO_RATE     48000
 #define AUDIO_FRAME    960      /* 20 ms at 48 kHz */
 #define AUDIO_RING     (AUDIO_RATE / 2)  /* 500 ms playback ring per peer */
+#define AUDIO_MARGIN_US 25000           /* audio plays this long after its playout-clock time,
+                                           so the next packet (FEC copy) is usually there */
 #define PKT_MAX        1500
+#define PEER_SILENCE_MS      30000   /* no packets at all for this long: peer is gone */
+#define PEER_SILENCE_LEFT_MS 3000    /* after the server reported it left */
 
 enum { ICE_NEW, ICE_CHECKING, ICE_CONNECTED, ICE_FAILED };
 
@@ -78,6 +82,7 @@ typedef struct {
     /* --- end-to-end encryption --- */
     mm_crypto_t crypto;
     int        bad_auth;        /* packets that failed decryption (per second) */
+    int        left_pending;    /* server said it left, but media was still arriving */
 
     /* --- receive side --- */
     rx_stats_t rxv, rxa;
@@ -86,6 +91,7 @@ typedef struct {
     uint16_t   play_seq;        /* first packet of next frame to assemble */
     uint16_t   high_seq;
     uint64_t   stall_us;        /* when assembly got stuck at play_seq (0 = not stuck) */
+    playout_t  vpo;             /* video playout clock: complete frames wait until due */
     nack_t     nacks[NACK_MAX];
     int        nnacks;
     vpx_codec_ctx_t vdec;
@@ -97,7 +103,8 @@ typedef struct {
     aslot_t    ajb[AJB_SLOTS];
     int        ajb_started;
     uint16_t   aplay_seq, ahigh_seq;
-    uint64_t   anext_us;        /* next 20 ms playout tick */
+    uint32_t   ahigh_ts;        /* RTP timestamp of the packet at ahigh_seq */
+    playout_t  apo;             /* audio playout clock (jitter buffer delay) */
     uint64_t   alast_rx_us;
     OpusDecoder *adec;
     int16_t    aring[AUDIO_RING];   /* decoded PCM for the SDL callback */
@@ -117,7 +124,9 @@ typedef struct {
     uint64_t   rx_bytes_v, rx_bytes_a, tx_bytes_v, tx_bytes_a;
     int        frames_decoded, freezes, nack_sent, rtx_recv, plis_sent;
     int        aframes, aconcealed, afec;   /* afec = frames rebuilt from in-band FEC */
-    int        alate;
+    int        alate;           /* audio packets that arrived after their playout time */
+    double     pi_sum, pi_sumsq; /* rendered-frame intervals this second (playout smoothness) */
+    int        pi_n;
     double     avg_frame_ms;
     uint64_t   last_frame_us;
     double     lost_pct_v, lost_pct_a;   /* receive loss over last interval */
@@ -142,6 +151,7 @@ typedef struct {
     int  duration;              /* seconds, 0 = until quit */
     int  udp_port;
     int  encrypt;               /* end-to-end media encryption (default on) */
+    int  jitter_buffer;         /* timestamp-driven playout delay (default on; --no-jb for comparison) */
     char pub_hex[MMC_KEY_HEX + 1];
 
     /* runtime */

@@ -12,6 +12,7 @@
  *   --no-adapt           fixed 1200 kbps, no AIMD quality control
  *   --no-encrypt         send media in the clear (for comparison / Wireshark)
  *   --no-mirror          show video unflipped (F toggles mirroring in the window)
+ *   --no-jb              jitter buffer off: play each frame as soon as it is complete (comparison)
  *   --headless           no window and no playback (benchmarks)
  *   --csv PATH --run ID  write per-second stats
  *   --duration SECS      leave after SECS seconds
@@ -33,7 +34,7 @@ static void usage(void) {
     fprintf(stderr,
             "usage: mm --server HOST[:PORT] --room ROOM --name NAME [--test | --file PATH]\n"
             "          [--video-dev NAME] [--audio-dev NAME] [--stun HOST[:PORT] | --no-stun]\n"
-            "          [--no-adapt] [--no-encrypt] [--headless] [--csv PATH --run ID] [--duration SECS] [--port N]\n"
+            "          [--no-adapt] [--no-encrypt] [--no-jb] [--headless] [--csv PATH --run ID] [--duration SECS] [--port N]\n"
             "       mm --list-devices\n");
     exit(2);
 }
@@ -91,6 +92,7 @@ int main(int argc, char **argv) {
     g.use_stun = 1;
     g.adapt = 1;
     g.encrypt = 1;
+    g.jitter_buffer = 1;
     g.mic_on = g.cam_on = 1;
     g.show_stats = 1;
     g.mirror = 1;
@@ -107,6 +109,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--no-stun")) g.use_stun = 0;
         else if (!strcmp(a, "--no-adapt")) g.adapt = 0;
         else if (!strcmp(a, "--no-encrypt")) g.encrypt = 0;
+        else if (!strcmp(a, "--no-jb")) g.jitter_buffer = 0;
         else if (!strcmp(a, "--no-mirror")) g.mirror = 0;
         else if (!strcmp(a, "--headless")) g.headless = 1;
         else if (!strcmp(a, "--test")) g.test_source = 1;
@@ -153,7 +156,7 @@ int main(int argc, char **argv) {
         g.csv = fopen(g.csv_path, "w");
         if (g.csv)
             fputs("ts,run,peer,remote,kind,direction,bitrate_kbps,packets_lost,loss_pct,jitter_ms,rtt_ms,fps,width,"
-                  "height,avail_out_kbps,limit_reason,concealed_pct,freeze_count,adapt_on,adapt_level,candidate_type\n",
+                  "height,avail_out_kbps,limit_reason,concealed_pct,freeze_count,adapt_on,adapt_level,candidate_type,playout_sd_ms,jb_delay_ms\n",
                   g.csv);
         else log_msg("main", "cannot write %s", g.csv_path);
     }

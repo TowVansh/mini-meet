@@ -8,7 +8,6 @@
 #include <vpx/vp8dx.h>
 
 #define VIDEO_WAIT_MIN_US  120000   /* how long to wait for a missing packet before skipping */
-#define AUDIO_TARGET_FRAMES 3       /* 60 ms playout delay */
 
 /* ================= video ================= */
 
@@ -62,12 +61,16 @@ void rx_video(peer_t *p, const rtp_hdr_t *h, const uint8_t *pl, size_t n, int rt
     if (n < 1) return;
     if (!p->rxv.init || p->rxv.ssrc != h->ssrc) {
         rx_stats_init(&p->rxv, h->ssrc, RTP_CLOCK_VIDEO, h->seq);
+        playout_reset(&p->vpo);
+        p->vpo.min_only = !g.jitter_buffer;
         p->remote_vssrc = h->ssrc;
         p->vjb_started = 0;
     }
     if (rtx) {
         p->rtx_recv++;
     } else {
+        /* The last packet of a frame marks when the frame became complete. */
+        if (h->marker) playout_add(&p->vpo, h->ts, RTP_CLOCK_VIDEO, now_us);
         /* Gap in sequence numbers: ask for the missing packets right away. */
         if (p->vjb_started && seq_newer(h->seq, (uint16_t)(p->high_seq + 1))) {
             uint16_t m;
@@ -127,6 +130,10 @@ static void show_frame(peer_t *p, const vpx_image_t *img, uint64_t now_us) {
         gap_ms = (now_us - p->last_frame_us) / 1000.0;
         if (p->avg_frame_ms > 0 && gap_ms > 3 * p->avg_frame_ms && gap_ms > p->avg_frame_ms + 150) p->freezes++;
         p->avg_frame_ms = p->avg_frame_ms > 0 ? 0.9 * p->avg_frame_ms + 0.1 * (gap_ms < 1000 ? gap_ms : 1000) : gap_ms;
+        /* Playout smoothness: spread of the intervals between shown frames. */
+        p->pi_sum += gap_ms;
+        p->pi_sumsq += gap_ms * gap_ms;
+        p->pi_n++;
     }
     p->last_frame_us = now_us;
     p->frames_decoded++;
@@ -165,6 +172,12 @@ static void video_tick(peer_t *p, uint64_t now_us) {
         size_t flen = 0;
         int complete = 0, key = 0, count = 0;
         vslot_t *first = &p->vjb[s % VJB_SLOTS];
+
+        /* Jitter buffer: hold the next frame until its playout time (its
+         * timestamp + the playout clock's delay), so frames are shown at the
+         * sender's pace even when the network delivers them unevenly. */
+        if (first->used && first->seq == s && first->start && now_us < playout_due_us(&p->vpo, first->ts, RTP_CLOCK_VIDEO))
+            break;
 
         if (first->used && first->seq == s && first->start) {
             key = first->key;
@@ -280,22 +293,19 @@ void rx_audio(peer_t *p, const rtp_hdr_t *h, const uint8_t *pl, size_t n, uint64
     if (n > sizeof p->ajb[0].data) return;
     if (!p->rxa.init || p->rxa.ssrc != h->ssrc) {
         rx_stats_init(&p->rxa, h->ssrc, RTP_CLOCK_AUDIO, h->seq);
+        playout_reset(&p->apo);
+        p->apo.min_only = !g.jitter_buffer;
         p->remote_assrc = h->ssrc;
         p->ajb_started = 0;
     }
     rx_stats_update(&p->rxa, h->seq, h->ts, now_us);
+    /* Late packets still update the playout clock: that is how the buffer
+     * learns that the network delay has grown and lengthens itself. */
+    playout_add(&p->apo, h->ts, RTP_CLOCK_AUDIO, now_us);
     p->alast_rx_us = now_us;
     if (p->ajb_started && !seq_newer(h->seq, (uint16_t)(p->aplay_seq - 1))) {
-        /* Arrived after its playout time. If this keeps happening the network
-         * delay has grown: restart playout with the delay rebuilt (adaptive playout). */
-        if (++p->alate > 5) {
-            p->ajb_started = 0;
-            p->alate = 0;
-        } else {
-            return;
-        }
-    } else {
-        p->alate = 0;
+        p->alate++;                                     /* its slot was already played (concealed) */
+        return;
     }
     s = &p->ajb[h->seq % AJB_SLOTS];
     s->used = 1;
@@ -306,9 +316,10 @@ void rx_audio(peer_t *p, const rtp_hdr_t *h, const uint8_t *pl, size_t n, uint64
         p->ajb_started = 1;
         p->aplay_seq = h->seq;
         p->ahigh_seq = h->seq;
-        p->anext_us = now_us + AUDIO_TARGET_FRAMES * 20000;   /* build up the playout delay */
+        p->ahigh_ts = h->ts;
     } else if (seq_newer(h->seq, p->ahigh_seq)) {
         p->ahigh_seq = h->seq;
+        p->ahigh_ts = h->ts;
     }
 }
 
@@ -340,16 +351,18 @@ static void audio_tick(peer_t *p, uint64_t now_us) {
         p->ajb_started = 0;
         return;
     }
-    while (now_us >= p->anext_us && guard++ < 10) {
+    while (guard++ < 10) {
         aslot_t *cur = &p->ajb[p->aplay_seq % AJB_SLOTS];
         aslot_t *nxt = &p->ajb[(uint16_t)(p->aplay_seq + 1) % AJB_SLOTS];
+        /* One Opus frame per sequence number, so a missing frame's timestamp is known too. */
+        uint32_t ts = p->ahigh_ts + (uint32_t)((int32_t)(int16_t)(p->aplay_seq - p->ahigh_seq) * AUDIO_FRAME);
         int n;
-        /* Too far behind the newest packet: jump forward to keep latency bounded. */
-        if ((uint16_t)(p->ahigh_seq - p->aplay_seq) > AUDIO_TARGET_FRAMES + 12 &&
-            (uint16_t)(p->ahigh_seq - p->aplay_seq) < 1000) {
+        if (now_us < playout_due_us(&p->apo, ts, RTP_CLOCK_AUDIO) + AUDIO_MARGIN_US) break;
+        /* Far behind the newest packet (a stall): jump forward to keep latency bounded. */
+        if ((int16_t)(p->ahigh_seq - p->aplay_seq) > 25) {
             uint16_t z;
-            for (z = p->aplay_seq; z != (uint16_t)(p->ahigh_seq - AUDIO_TARGET_FRAMES); z++) p->ajb[z % AJB_SLOTS].used = 0;
-            p->aplay_seq = (uint16_t)(p->ahigh_seq - AUDIO_TARGET_FRAMES);
+            for (z = p->aplay_seq; z != (uint16_t)(p->ahigh_seq - 2); z++) p->ajb[z % AJB_SLOTS].used = 0;
+            p->aplay_seq = (uint16_t)(p->ahigh_seq - 2);
             continue;
         }
         if (cur->used && cur->seq == p->aplay_seq) {
@@ -367,7 +380,6 @@ static void audio_tick(peer_t *p, uint64_t now_us) {
         p->aframes++;
         if (n > 0) ring_write(p, pcm, n);
         p->aplay_seq++;
-        p->anext_us += 20000;
     }
 }
 

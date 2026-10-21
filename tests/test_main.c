@@ -130,6 +130,34 @@ static void test_rx_stats(void) {
     CHECK(b.jitter < 50);
 }
 
+static void test_playout(void) {
+    playout_t po;
+    const uint64_t t0 = 1000000000ull;
+    const uint32_t ts0 = 4294967000u;                           /* the 32-bit timestamp wraps during the test */
+    int64_t d;
+    int i;
+    playout_reset(&po);
+    CHECK(playout_due_us(&po, ts0, 90000) == 0);                /* no data yet: play at once */
+    /* 64 frames sent 50 ms apart, 100 ms network delay plus 0..63 ms of jitter */
+    for (i = 0; i < 64; i++) {
+        uint32_t ts = ts0 + (uint32_t)i * 4500u;
+        uint64_t arrival = t0 + (uint64_t)i * 50000 + 100000 + (uint64_t)((i * 37) % 64) * 1000;
+        playout_add(&po, ts, 90000, arrival);
+    }
+    /* the buffer holds back to the 95th percentile: ~60 ms over the fastest frame */
+    CHECK(playout_buffer_ms(&po) > 55 && playout_buffer_ms(&po) < 64);
+    /* playout keeps the sender's 50 ms spacing, however unevenly frames arrived */
+    d = (int64_t)playout_due_us(&po, ts0 + 10u * 4500u, 90000) - (int64_t)playout_due_us(&po, ts0 + 9u * 4500u, 90000);
+    CHECK(d >= 49999 && d <= 50001);
+    /* and a frame is due ~160 ms after it was sent (100 ms delay + 60 ms buffer) */
+    d = (int64_t)playout_due_us(&po, ts0 + 9u * 4500u, 90000) - (int64_t)(t0 + 9u * 50000u);
+    CHECK(d > 155000 && d < 165000);
+    /* buffer off (--no-jb): paced by the fastest frame, no jitter allowance */
+    po.min_only = 1;
+    d = (int64_t)playout_due_us(&po, ts0 + 9u * 4500u, 90000) - (int64_t)(t0 + 9u * 50000u);
+    CHECK(d > 99000 && d < 101000 && playout_buffer_ms(&po) == 0);
+}
+
 static void test_cc(void) {
     cc_state_t cc;
     int i;
@@ -218,6 +246,7 @@ int main(void) {
     test_rtp();
     test_rtcp();
     test_rx_stats();
+    test_playout();
     test_cc();
     test_crypto();
     test_key_agreement();

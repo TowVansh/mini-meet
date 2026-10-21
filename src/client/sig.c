@@ -57,7 +57,13 @@ static void on_line(char *line) {
         if (p) ice_send_candidates(p);
     } else if (strcmp(m.argv[0], "PEER_LEFT") == 0 && m.argc == 2) {
         p = peer_find(m.argv[1]);
-        if (p) {
+        if (p && p->ice_state == ICE_CONNECTED && now_ms() - p->last_rx_ms < PEER_SILENCE_LEFT_MS) {
+            /* The server can time a peer out because its pings are stuck in the
+             * same congested queue as the media. Media is peer-to-peer, so trust
+             * it: keep the peer until its packets stop (netloop.c). */
+            log_msg("sig", "server says %s left, but its media is still arriving: keeping it until that stops", p->name);
+            p->left_pending = 1;
+        } else if (p) {
             log_msg("sig", "%s left", p->name);
             peer_remove(p);
         }
