@@ -14,8 +14,8 @@ Course project 16, Computer Networks (CO4, CO5; Modules 4 and 5).
 | [docs/VIVA_NOTES.md](docs/VIVA_NOTES.md) | Likely viva questions with answers |
 | [docs/CODE_TOUR.md](docs/CODE_TOUR.md) | Which file and function to open for each review question |
 | [docs/STUDY.md](docs/STUDY.md) | Syllabus-ordered study guide |
-| [Mini-Meet-Report.pdf](Mini-Meet-Report.pdf) | Full project report (PDF, 14 pages; source: docs/report.html) |
-| [Mini-Meet-Slides.pptx](Mini-Meet-Slides.pptx) | Review presentation (16 slides with speaker notes; built by docs/slides/build_deck.js) |
+| [Mini-Meet-Report.pdf](Mini-Meet-Report.pdf) | Full project report (PDF; source: docs/report.html) |
+| [Mini-Meet-Slides.pptx](Mini-Meet-Slides.pptx) | Review presentation (17 slides with speaker notes; built by docs/slides/build_deck.js) |
 
 ## Build
 
@@ -47,17 +47,19 @@ Up to 4 clients per room. On another PC, use `--server <server-ip>`. Keys in the
 
 Each remote tile shows the selected candidate pair (`host->host`, `srflx->srflx`), RTT, resolution, loss, jitter, freezes and the loss the other side reports. Add `--csv stats.csv` to log every second.
 
+Dashboard for a running call: start the client with `--csv results/live-pc1.csv`, then in WSL run `python3 analysis/dashboard.py --csv results/live-pc1.csv` and open http://localhost:8090.
+
 Windows Firewall asks the first time `mm.exe` / `mm-server.exe` run. Allow both, and tick **public** networks too if you are on college Wi-Fi.
 
 ## Evaluation
 
 ```bash
 # from Windows; tc netem needs root inside WSL
-wsl -d Ubuntu -u root -- bash /mnt/e/MiniMeet/bench/run-matrix.sh
+wsl -d Ubuntu -u root -- bash /mnt/e/Projects/MiniMeet/bench/run-matrix.sh
 python3 analysis/plot.py results/eval_*.csv     # summary.md + graphs in results/
 # changing network conditions in one call (bitrate adaptation demo), jitter buffer off for comparison
-wsl -d Ubuntu -u root -- bash -c 'cd /mnt/e/MiniMeet && SCHEDULE="baseline:15 rate2m:20 rate1m:20 rate500k:20 rate1m:20 baseline:20" TAG=eval bash bench/run-matrix.sh'
-wsl -d Ubuntu -u root -- bash -c 'cd /mnt/e/MiniMeet && PROFILES="jitter30 jitter60" EXTRA=--no-jb TAG=nojb bash bench/run-matrix.sh'
+wsl -d Ubuntu -u root -- bash -c 'cd /mnt/e/Projects/MiniMeet && SCHEDULE="baseline:15 rate2m:20 rate1m:20 rate500k:20 rate1m:20 baseline:20" TAG=eval bash bench/run-matrix.sh'
+wsl -d Ubuntu -u root -- bash -c 'cd /mnt/e/Projects/MiniMeet && PROFILES="jitter30 jitter60" EXTRA=--no-jb TAG=nojb bash bench/run-matrix.sh'
 python3 analysis/compare.py results/nojb_*.csv   # table only, does not overwrite the main graphs
 ```
 

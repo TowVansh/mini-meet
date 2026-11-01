@@ -11,7 +11,7 @@
 # clean for WARMUP seconds, apply the profile, record DURATION seconds.
 #
 # Run as root (namespaces and tc need it), from Windows:
-#   wsl -d Ubuntu -u root -- bash /mnt/e/MiniMeet/bench/run-matrix.sh
+#   wsl -d Ubuntu -u root -- bash /mnt/e/Projects/MiniMeet/bench/run-matrix.sh
 # Env: PROFILES="baseline loss5" ADAPT="0 1" DURATION=45 WARMUP=10 TAG=eval
 #      SCHEDULE="baseline:15 rate1m:20 ..." (changing conditions in one call; see below)
 #      EXTRA="--no-jb" (extra mm flags for every client, e.g. jitter buffer off)

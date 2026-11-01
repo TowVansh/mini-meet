@@ -60,7 +60,7 @@
   <div class="meta">
     Project 16: Video Conferencing Application (Mini-Meet) · Group B · CO4, CO5 · Modules 4 and 5<br>
     Platforms: Windows (MinGW-w64) and Linux · Language: C11 · Tools: raw UDP + codecs (VP8, Opus), STUN, Python, tc netem, Git<br>
-    Source code and data: github.com/TowVansh/mini-meet · October 2026
+    Source code and data: <a href="https://github.com/TowVansh/mini-meet">https://github.com/TowVansh/mini-meet</a> · November 2026
   </div>
 </section>
 
@@ -94,15 +94,16 @@
 <!-- ============ 1 ============ -->
 <h1 class="newpage">1. Introduction and Objectives</h1>
 <p>Video calls combine two very different kinds of traffic. Call setup needs a few hundred bytes that must arrive reliably and in order. Media needs a continuous stream of time-critical packets, where a late packet is as useless as a lost one. The project builds both halves ourselves and measures how a real-time stream behaves when the network loses, delays, reorders or throttles packets.</p>
-<h2>1.1 Deliverables</h2>
+<h2>1.1 Expected outcome mapping</h2>
+<p>Each expected outcome of the brief, mapped to what was delivered. All code, data and documents are at <a href="https://github.com/TowVansh/mini-meet">https://github.com/TowVansh/mini-meet</a>.</p>
 <table>
 <tr><th style="width:38%">Brief asks for</th><th>Delivered</th></tr>
 <tr><td>Working multi-party call with audio and video</td><td>2–4 participants, full mesh, VP8 640×480 at 20 fps + Opus 32 kbps; Windows and Linux</td></tr>
-<tr><td>Custom signalling server and documented protocol</td><td><code>mm-server</code>, a line-based TCP protocol (Section 3)</td></tr>
+<tr><td>Custom signalling server and documented protocol</td><td><code>mm-server</code>, a line-based TCP protocol (Section 3; <code>docs/PROTOCOL.md</code>)</td></tr>
 <tr><td>NAT traversal across separate networks (STUN)</td><td>Own STUN client and server, UDP hole punching; Wi-Fi ↔ mobile hotspot connected <code>srflx→srflx</code></td></tr>
 <tr><td>Call quality under loss, jitter and bandwidth limits: how the system degrades and adapts</td><td>28 netem runs with rate control off/on, a jitter-buffer on/off experiment, and one call through changing bandwidth (Section 10)</td></tr>
-<tr><td>Architecture: media path vs signalling path</td><td>Section 2</td></tr>
-<tr class="hi"><td>Beyond the brief</td><td>End-to-end media encryption, adaptive jitter buffer, recorded-file streaming, 72 unit-test checks, prebuilt Windows release</td></tr>
+<tr><td>Architecture: media path vs signalling path</td><td>Section 2; <code>docs/ARCHITECTURE.md</code></td></tr>
+<tr class="hi"><td>Beyond the brief</td><td>End-to-end media encryption, adaptive jitter buffer, live dashboard, recorded-file streaming, 72 unit-test checks, prebuilt Windows release</td></tr>
 </table>
 <h2>1.2 Milestones</h2>
 <table>
@@ -377,6 +378,35 @@
 </figure>
 
 <!-- ============ 11 ============ -->
+<h2>10.7 Output screenshots and dashboard</h2>
+<p>Real output from a call between two clients (PC1, PC2) on one laptop with the built-in test source. The live review demo uses the webcam and two laptops.</p>
+<figure>
+<img src="img/output-call.png" style="width:140mm" alt="Mini-Meet call window">
+<figcaption>Figure 5. Client window on PC2: its own view (left) and PC1 (right), with the live overlay: candidate pair, safety code, RTT, loss, jitter, freezes.</figcaption>
+</figure>
+<pre>
+$ mm-server 9640
+[server] Mini-Meet signalling server listening on TCP 9640 (protocol v1)
+[room] join room=demo id=ae2ea3fb name=PC1 from=127.0.0.1:64698 (1/4)
+[room] join room=demo id=306e24b3 name=PC2 from=127.0.0.1:64700 (2/4)
+
+$ mm --server 127.0.0.1:9640 --room demo --name PC2 --test
+[sig] joined room demo as PC2 (id 306e24b3), 1 already here
+[ice] PC1: remote host candidate 172.16.242.48:63029
+[crypto] PC1: end-to-end keys ready, safety code 0789-0177 (compare on both screens)
+[ice] PC1: CONNECTED via host-&gt;host, media to 172.16.242.48:63029 (2 ms)
+[stats] PC1 host-&gt;host rtt 5ms | in v 1325kbps 20fps 640x480 loss 0.0% jit 0ms frz 0
+        | a conceal 0.0% | out 1192kbps lvl 0 | jb v 5ms a 27ms playout-sd 2.7ms
+
+$ make test
+72 checks, 0 failed
+</pre>
+<p><b>Dashboard.</b> <code>analysis/dashboard.py</code> (Python standard library) serves a local web page. It shows the running call's statistics, refreshed every second from the client's <code>--csv</code> file, along with the evaluation table and the timeline graph of any run.</p>
+<figure>
+<img src="img/output-dashboard.png" style="width:128mm" alt="Mini-Meet dashboard">
+<figcaption>Figure 6. Dashboard during the same call: live numbers and graphs for the peer, above the evaluation results.</figcaption>
+</figure>
+
 <h1>11. Discussion</h1>
 <ul>
 <li><b>Random loss up to 5 % is invisible.</b> NACK retransmission repairs video before the frame deadline, and Opus FEC keeps audio concealment ≤ 0.4 %. At 10–20 % loss a packet and its retransmission are sometimes both lost. The frame is skipped and a keyframe is awaited, which shows as freezes (23 at 20 %). Rate control reduces this to 15, because smaller frames have fewer packets that can be lost.</li>
@@ -431,6 +461,9 @@ bin/mm --server 127.0.0.1 --room demo --name PC3 --file media/sample.mp4    # re
 # across networks: expose the server with a TCP tunnel, then join with --server bore.pub:PORT
 bore local 9000 --to bore.pub
 
+# dashboard for a running call (start the client with --csv results/live-pc1.csv)
+python3 analysis/dashboard.py --csv results/live-pc1.csv    # http://localhost:8090
+
 # evaluation (inside WSL/Linux as root), then the graphs
 bash bench/run-matrix.sh
 SCHEDULE="baseline:15 rate2m:20 rate1m:20 rate500k:20 rate1m:20 baseline:20" bash bench/run-matrix.sh
@@ -439,7 +472,7 @@ python3 analysis/plot.py results/eval_*.csv
 <p class="small">Window keys: M mute, V camera, S statistics, F mirror, Q quit. Options: <code>--no-adapt</code>, <code>--no-jb</code>, <code>--no-encrypt</code>, <code>--csv FILE</code>, <code>--list-devices</code>.</p>
 
 <h2>References</h2>
-<ol class="small">
+<ol class="small" style="columns:2;column-gap:8mm">
 <li>RFC 3550: RTP, A Transport Protocol for Real-Time Applications (2003).</li>
 <li>RFC 4585: Extended RTP Profile for RTCP-Based Feedback (NACK, PLI) (2006).</li>
 <li>RFC 5389: Session Traversal Utilities for NAT (STUN) (2008).</li>

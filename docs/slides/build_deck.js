@@ -94,7 +94,8 @@ let s = pres.addSlide({ masterName: "TITLE_DARK", sectionTitle: "Overview" });
 s.addText("Mini-Meet", { placeholder: "title" });
 s.addText("Real-time video calls written in C: our own signalling, NAT traversal, RTP media engine, jitter buffer, rate control and end-to-end encryption", { placeholder: "body" });
 text(s, "COMPUTER NETWORKS · PROJECT 16 · VIDEO CONFERENCING APPLICATION", { x: 0.8, y: 1.55, w: 8, h: 0.4, fontSize: 14, bold: true, color: C.accent1, charSpacing: 1 });
-text(s, "Windows + Linux · C11 · FFmpeg · UDP sockets · tc netem · github.com/TowVansh/mini-meet", { x: 0.8, y: 6.55, w: 9, h: 0.35, fontSize: 13, color: C.accent5 });
+text(s, ["Suvansh Choudhary 25BAI0252", "Priyam Sharma 25BAI0159", "Avika Agarwal 25BBS0057"].join("\n"), { x: 0.8, y: 5.55, w: 7, h: 0.85, fontSize: 14, color: C.background2 });
+text(s, "github.com/TowVansh/mini-meet", { x: 0.8, y: 6.55, w: 7, h: 0.35, fontSize: 13, color: C.accent5 });
 // motif: three call nodes (server + two peers)
 s.addShape(S.LINE, { x: 9.05, y: 2.55, w: 1.25, h: 1.6, line: { color: HEX.accent2, width: 2, dashType: "dash" }, objectName: id("net"), flipH: true });
 s.addShape(S.LINE, { x: 10.8, y: 2.55, w: 1.25, h: 1.6, line: { color: HEX.accent2, width: 2, dashType: "dash" }, objectName: id("net") });
@@ -108,13 +109,13 @@ s.addNotes("Mini-Meet is a 2 to 4 person video calling app we built in C from th
 
 // ---------- 2. what we built ----------
 s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "Overview" });
-s.addText("Every deliverable in the brief is working", { placeholder: "title" });
+s.addText("Expected outcomes: all met", { placeholder: "title" });
 const deliv = [
-  ["Multi-party call", "2–4 people, audio and video"],
-  ["Signalling", "our own server and a documented text protocol"],
-  ["NAT traversal", "STUN, tested across two networks"],
-  ["Call quality", "measured under loss, jitter and bandwidth limits"],
-  ["Architecture", "media path vs signalling path, documented"],
+  ["Multi-party call", "2–4 people; 12/12 streams verified"],
+  ["Signalling", "mm-server, docs/PROTOCOL.md"],
+  ["NAT traversal", "STUN, srflx→srflx, Wi-Fi ↔ hotspot"],
+  ["Call quality", "28 tc netem runs, graphs, dashboard"],
+  ["Architecture", "media vs signalling, docs/ARCHITECTURE.md"],
 ];
 const miles = [
   ["Months 1–2", "signalling server and two-party media path"],
@@ -123,7 +124,7 @@ const miles = [
   ["Months 5–6", "impairment evaluation, report and viva"],
 ];
 card(s, 0.6, 1.5, 6.0, 4.75);
-text(s, "Deliverables", { x: 0.9, y: 1.7, w: 5.4, h: 0.45, fontSize: 19, bold: true, color: C.text1 });
+text(s, "Expected outcome → evidence", { x: 0.9, y: 1.7, w: 5.4, h: 0.45, fontSize: 19, bold: true, color: C.text1 });
 deliv.forEach(([h, d], i) => text(s, [{ text: h + ": ", options: { bold: true, color: C.text1 } }, { text: d }], { x: 0.9, y: 2.3 + i * 0.75, w: 5.45, h: 0.65, fontSize: 15 }));
 card(s, 6.85, 1.5, 5.85, 4.75);
 text(s, "Milestones", { x: 7.15, y: 1.7, w: 5.3, h: 0.45, fontSize: 19, bold: true, color: C.text1 });
@@ -413,6 +414,19 @@ real.forEach(([big, d], i) => {
   text(s, d, { x: x + 0.3, y: y + 1.1, w: 5.4, h: 1.1, fontSize: 15 });
 });
 s.addNotes("Beyond the emulator: four people in one room, a real call between two different networks, streaming a recorded file, and 72 unit-test checks on both operating systems.");
+
+// ---------- repository and dashboard ----------
+s = pres.addSlide({ masterName: "CONTENT", sectionTitle: "Evaluation" });
+s.addText("Repository and live dashboard", { placeholder: "title" });
+card(s, 0.6, 1.5, 5.95, 5.1);
+text(s, "GitHub repository", { x: 0.9, y: 1.7, w: 5.4, h: 0.45, fontSize: 19, bold: true, color: C.text1 });
+text(s, [{ text: "github.com/TowVansh/mini-meet", options: { hyperlink: { url: "https://github.com/TowVansh/mini-meet" } } }], { x: 0.9, y: 2.2, w: 5.4, h: 0.4, fontSize: 16 });
+bullets(s, ["src/: all C code (server, STUN, client)", "tests/: 72 unit-test checks", "bench/, analysis/: netem runs and graphs", "results/: raw data for every run", "docs/: architecture, protocol, evaluation", "bin/: ready-to-run Windows and Linux builds"], { x: 0.9, y: 2.8, w: 5.4, h: 3.5, fontSize: 16 });
+card(s, 6.8, 1.5, 5.9, 5.1);
+text(s, "Dashboard (shown in the live demo)", { x: 7.1, y: 1.7, w: 5.35, h: 0.45, fontSize: 19, bold: true, color: C.text1 });
+bullets(s, ["Reads the running call's per-second stats file", "Live per peer: RTT, bitrate, fps, loss, jitter, freezes, audio concealment, playout spread", "Live graphs of bitrate, RTT, fps and loss", "Evaluation table for all 28 runs", "Timeline graph of any run"], { x: 7.1, y: 2.3, w: 5.35, h: 3.2, fontSize: 16 });
+text(s, "python3 analysis/dashboard.py --csv stats.csv", { x: 7.1, y: 5.2, w: 5.35, h: 0.4, fontFace: "Consolas", fontSize: 14, color: C.text1 });
+s.addNotes("Everything is public on GitHub, including the raw results. The dashboard reads the stats file the client writes every second, so during the demo you can watch the numbers change live.");
 
 // ---------- 15. limitations ----------
 pres.addSection({ title: "Wrap-up" });
