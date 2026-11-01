@@ -1,0 +1,13 @@
+$ grep "cc]" results/eval_rate1m_adapt1_p2__botA.log
+[cc] botB reported loss 0.0% rtt -1 ms -> encoder level 2 (500 kbps 480x360)
+[cc] botB reported loss 0.0% rtt 0 ms -> encoder level 1 (800 kbps 640x480)
+[cc] botB reported loss 0.0% rtt 0 ms -> encoder level 0 (1200 kbps 640x480)
+[cc] botB reported loss 0.0% rtt 997 ms -> encoder level 2 (500 kbps 480x360)
+[cc] botB reported loss 0.0% rtt 1390 ms -> encoder level 4 (180 kbps 320x240)
+[cc] botB reported loss 0.0% rtt 897 ms -> encoder level 5 (100 kbps 160x120)
+[cc] botB reported loss 0.0% rtt 3 ms -> encoder level 4 (180 kbps 320x240)
+[cc] botB reported loss 0.0% rtt 6 ms -> encoder level 3 (300 kbps 320x240)
+[cc] botB reported loss 0.0% rtt 15 ms -> encoder level 2 (500 kbps 480x360)
+[cc] botB reported loss 0.0% rtt 38 ms -> encoder level 1 (800 kbps 640x480)
+[cc] botB reported loss 0.0% rtt 576 ms -> encoder level 3 (300 kbps 320x240)
+[cc] botB reported loss 0.0% rtt 934 ms -> encoder level 5 (100 kbps 160x120)

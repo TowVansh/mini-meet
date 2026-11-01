@@ -1,0 +1,9 @@
+$ scripts/impair.sh loss5
+lo: loss 5%
+qdisc netem 8001: root refcnt 2 limit 1000 loss 5%
+$ scripts/impair.sh jitter30
+lo: delay 100ms 30ms distribution normal
+qdisc netem 8002: root refcnt 2 limit 1000 delay 100ms  30ms
+$ scripts/impair.sh rate1m
+lo: rate 1mbit
+qdisc netem 8003: root refcnt 2 limit 1000 rate 1Mbit

@@ -1,0 +1,2 @@
+$ make test
+72 checks, 0 failed

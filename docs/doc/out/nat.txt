@@ -1,0 +1,9 @@
+$ mm.exe --server bore.pub:6897 --room nat --name Laptop
+09:54:34 [ice] host candidate 172.16.240.143:54088
+09:54:34 [ice] srflx candidate 36.255.16.51:54088 (via STUN stun.l.google.com)
+09:54:34 [sig] connected to bore.pub:6897
+09:54:35 [sig] joined room nat as Laptop (id fb27b4d5), 0 already here
+09:57:16 [sig] Friend joined
+09:57:17 [ice] Friend: remote host candidate 10.129.165.253:65492
+09:57:17 [ice] Friend: remote srflx candidate 152.57.86.31:65492
+09:57:17 [ice] Friend: CONNECTED via srflx->srflx, media to 152.57.86.31:65492 (501 ms)

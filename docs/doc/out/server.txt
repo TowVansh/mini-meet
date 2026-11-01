@@ -1,0 +1,6 @@
+$ mm-server 9701
+[server] Mini-Meet signalling server listening on TCP 9701 (protocol v1)
+[room] join room=demo id=15288e56 name=PC1 from=127.0.0.1:55248 (1/4)
+[room] join room=demo id=98abc8c7 name=PC2 from=127.0.0.1:55254 (2/4)
+[room] leave room=demo id=98abc8c7 name=PC2
+[room] leave room=demo id=15288e56 name=PC1
