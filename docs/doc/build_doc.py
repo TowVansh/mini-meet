@@ -17,7 +17,6 @@ OUT = Path(__file__).parent / "out"
 IMG = ROOT / "docs" / "img"
 FONT = ImageFont.truetype("/mnt/c/Windows/Fonts/consola.ttf", 26)
 
-TEAM_NUMBER = "________"
 REPO = "https://github.com/TowVansh/mini-meet"
 
 
@@ -71,8 +70,8 @@ front = f"""
 <div class="course">Computer Networks · Project Documentation</div>
 <h1 class="title">Video Conferencing Application (Mini-Meet)</h1>
 <table class="info">
-<tr><th>Team number</th><td>{TEAM_NUMBER}</td></tr>
-<tr><th>Project title</th><td>Project 16: Video Conferencing Application (Mini-Meet)<br>Group B: Real-World Application Projects</td></tr>
+<tr><th>Project number</th><td>16</td></tr>
+<tr><th>Project title</th><td>Video Conferencing Application (Mini-Meet)<br>Group B: Real-World Application Projects</td></tr>
 <tr><th>Team members</th><td>Suvansh Choudhary (25BAI0252)<br>Priyam Sharma (25BAI0159)<br>Avika Agarwal (25BBS0057)</td></tr>
 <tr><th>Source code</th><td><a href="{REPO}">{REPO}</a></td></tr>
 </table>
