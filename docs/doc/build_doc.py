@@ -1,35 +1,21 @@
 """Build docs/documentation.html: one section per expected outcome, with real code and output.
 
-    python3 docs/doc/build_doc.py    (WSL; needs Pillow, then print the HTML to PDF with Chrome)
+    python3 docs/doc/build_doc.py    (then print the HTML to PDF with Chrome)
 
-Code is cut from the source files and terminal images are drawn from the captured
-output in docs/doc/out (see capture.sh), so neither can drift from the project.
+Code is cut from the source files; the screenshots come from docs/doc/shoot.ps1,
+which runs the real programs in console windows.
 """
 
 import html
 import re
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = Path(__file__).parent / "out"
-IMG = ROOT / "docs" / "img"
-FONT = ImageFont.truetype("/mnt/c/Windows/Fonts/consola.ttf", 26)
 
 REPO = "https://github.com/TowVansh/mini-meet"
 
 
-def terminal(name):
-    """Draw a captured output file as a terminal-style image; returns its relative path."""
-    lines = (OUT / f"{name}.txt").read_text().rstrip().split("\n")
-    w = max(int(FONT.getlength(l)) for l in lines) + 48
-    im = Image.new("RGB", (w, 34 * len(lines) + 40), "#101418")
-    d = ImageDraw.Draw(im)
-    for i, l in enumerate(lines):
-        d.text((24, 20 + i * 34), l, font=FONT, fill="#8fe388" if l.startswith("$") else "#e6e8eb")
-    im.save(IMG / f"term-{name}.png")
-    return f"img/term-{name}.png"
 
 
 def func(path, name):
@@ -106,8 +92,9 @@ s2 = f"""
 {code("src/server/mm_server.c", "handle_join", "handle_cand")}
 {code("src/common/proto.c", "mm_linebuf_pop")}
 <h2>Implementation</h2>
-{fig(terminal("signal"), "Protocol exchange with the running server: two clients join, ping, a rejected second JOIN, and a leave.", 125)}
-{fig(terminal("server"), "Server log for the same session.", 125)}
+{fig("img/shot-signal.png", "Protocol exchange with the running server: two clients join, ping, a rejected second JOIN, and a leave.", 115)}
+{fig("img/shot-server.png", "Server log for the same session.", 125)}
+{fig("img/shot-protocol.png", "The protocol document, docs/PROTOCOL.md, in the repository.", 130)}
 """
 
 s3 = f"""
@@ -117,8 +104,9 @@ s3 = f"""
 {code("src/stun/stun.c", "stun_build_success")}
 {code("src/client/ice.c", "send_check", "ice_tick")}
 <h2>Implementation</h2>
-{fig(terminal("nat"), "Client log from the live test on 2026-10-08: this laptop on college Wi-Fi, the other (Friend) on a phone hotspot. Different private and public addresses; connected directly, srflx to srflx.", 160)}
-<p>All 1404 recorded samples of these calls (<code>results/nat_c__Laptop.csv</code>) show <code>srflx-&gt;srflx</code>, with a median round-trip time of 85 ms. Signalling went through a TCP tunnel; media went directly between the laptops. Not covered: two symmetric NATs would need a TURN relay, which is not implemented. The client detects this case and reports it after 15 s.</p>
+{fig("img/shot-stun.png", "Windows client run live: STUN returns the public (srflx) address of this laptop. In this run both clients are on one laptop, so the direct host path connects first.", 165)}
+{fig("img/shot-nat.png", "Saved client log of the cross-network test on 2026-10-08: this laptop on college Wi-Fi, the other (Friend) on a phone hotspot. Different private and public addresses; connected directly, srflx to srflx. The second command counts the path recorded in every sample of that call.", 165)}
+<p>The test recorded 1404 samples (<code>results/nat_c__Laptop.csv</code>), all on <code>srflx-&gt;srflx</code>, with a median round-trip time of 85 ms. Signalling went through a TCP tunnel; media went directly between the laptops. Not covered: two symmetric NATs would need a TURN relay, which is not implemented. The client detects this case and reports it after 15 s.</p>
 """
 
 s4 = f"""
@@ -140,8 +128,8 @@ s4 = f"""
 {code("src/client/rtp.c", "rx_stats_update")}
 {code("src/client/cc.c", "cc_on_report")}
 <h2>Implementation</h2>
-{fig(terminal("netem"), "Impairment profiles applied with tc netem.", 125)}
-{fig(terminal("cc"), "Rate controller log during the 1 Mbit/s run: it backs off when the round-trip time rises, then climbs again.", 150)}
+{fig("img/shot-netem.png", "Impairment profiles applied with tc netem.", 125)}
+{fig("img/shot-cc.png", "Rate controller log during the 1 Mbit/s run: it backs off when the round-trip time rises, then climbs again.", 150)}
 {fig("../results/timeline_rate1m.png", "1 Mbit/s cap applied at 9 s. Fixed rate (blue): the round-trip time climbs past 10 s and loss reaches 13.6 %. With rate control: the call stays at 20 fps.", 125)}
 {fig("../results/timeline_schedule.png", "One call through changing bandwidth: clean, 2 Mbit/s, 1 Mbit/s, 500 kbit/s, 1 Mbit/s, clean.", 125)}
 {fig("img/output-dashboard.png", "Dashboard (analysis/dashboard.py): live statistics of a running call, above the evaluation results.", 125)}
@@ -163,7 +151,8 @@ s5 = f"""
 <p>Where the two paths meet in the client: one <code>select()</code> loop watches the TCP signalling socket and the UDP media socket, and each UDP packet is sorted into STUN, RTCP or RTP by its first bytes.</p>
 {code("src/client/netloop.c", "on_udp")}
 <h2>Implementation</h2>
-{fig(terminal("test"), "Unit tests covering the protocol code on both paths.", 70)}
+{fig("img/shot-arch.png", "The architecture document, docs/ARCHITECTURE.md, in the repository.", 130)}
+{fig("img/shot-test.png", "Unit tests covering the protocol code on both paths.", 80)}
 """
 
 PAGE = f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Mini-Meet Project Documentation</title><style>

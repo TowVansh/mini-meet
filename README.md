@@ -16,6 +16,7 @@ Course project 16, Computer Networks (CO4, CO5; Modules 4 and 5).
 | [docs/STUDY.md](docs/STUDY.md) | Syllabus-ordered study guide |
 | [Mini-Meet-Report.pdf](Mini-Meet-Report.pdf) | Full project report (PDF; source: docs/report.html) |
 | [Mini-Meet-Documentation.pdf](Mini-Meet-Documentation.pdf) | Assessment document: each expected outcome with its code and output (source: docs/doc/) |
+| [Mini-Meet-Assessment-10.pdf](Mini-Meet-Assessment-10.pdf) | Upload for assessment 10: documentation followed by the slides |
 | [Mini-Meet-Slides.pptx](Mini-Meet-Slides.pptx) | Review presentation (17 slides with speaker notes; built by docs/slides/build_deck.js) |
 
 ## Build

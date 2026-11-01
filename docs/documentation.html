@@ -144,8 +144,9 @@ static void handle_cand(client_t *c, mm_msg_t *m) {
     return 1;
 }</pre>
 <h2>Implementation</h2>
-<figure><img src="img/term-signal.png" style="max-width:100%;width:125mm"><figcaption>Protocol exchange with the running server: two clients join, ping, a rejected second JOIN, and a leave.</figcaption></figure>
-<figure><img src="img/term-server.png" style="max-width:100%;width:125mm"><figcaption>Server log for the same session.</figcaption></figure>
+<figure><img src="img/shot-signal.png" style="max-width:100%;width:115mm"><figcaption>Protocol exchange with the running server: two clients join, ping, a rejected second JOIN, and a leave.</figcaption></figure>
+<figure><img src="img/shot-server.png" style="max-width:100%;width:125mm"><figcaption>Server log for the same session.</figcaption></figure>
+<figure><img src="img/shot-protocol.png" style="max-width:100%;width:130mm"><figcaption>The protocol document, docs/PROTOCOL.md, in the repository.</figcaption></figure>
 
 <h1>Outcome 3: NAT traversal demonstration across separate networks (STUN) <span class="done">Done</span></h1>
 <p>Each client asks a STUN server for its public address (the server-reflexive, or srflx, candidate) and sends its candidates through signalling. Both peers then send STUN checks to each other at the same time, which opens a path through both NATs (UDP hole punching). The first candidate that answers carries the media.</p>
@@ -198,8 +199,9 @@ void ice_tick(peer_t *p, uint64_t now) {
     }
 }</pre>
 <h2>Implementation</h2>
-<figure><img src="img/term-nat.png" style="max-width:100%;width:160mm"><figcaption>Client log from the live test on 2026-10-08: this laptop on college Wi-Fi, the other (Friend) on a phone hotspot. Different private and public addresses; connected directly, srflx to srflx.</figcaption></figure>
-<p>All 1404 recorded samples of these calls (<code>results/nat_c__Laptop.csv</code>) show <code>srflx-&gt;srflx</code>, with a median round-trip time of 85 ms. Signalling went through a TCP tunnel; media went directly between the laptops. Not covered: two symmetric NATs would need a TURN relay, which is not implemented. The client detects this case and reports it after 15 s.</p>
+<figure><img src="img/shot-stun.png" style="max-width:100%;width:165mm"><figcaption>Windows client run live: STUN returns the public (srflx) address of this laptop. In this run both clients are on one laptop, so the direct host path connects first.</figcaption></figure>
+<figure><img src="img/shot-nat.png" style="max-width:100%;width:165mm"><figcaption>Saved client log of the cross-network test on 2026-10-08: this laptop on college Wi-Fi, the other (Friend) on a phone hotspot. Different private and public addresses; connected directly, srflx to srflx. The second command counts the path recorded in every sample of that call.</figcaption></figure>
+<p>The test recorded 1404 samples (<code>results/nat_c__Laptop.csv</code>), all on <code>srflx-&gt;srflx</code>, with a median round-trip time of 85 ms. Signalling went through a TCP tunnel; media went directly between the laptops. Not covered: two symmetric NATs would need a TURN relay, which is not implemented. The client detects this case and reports it after 15 s.</p>
 
 <h1>Outcome 4: Call-quality measurements under packet loss, jitter and bandwidth limits <span class="done">Done</span></h1>
 <p>Two Linux network namespaces joined by a virtual link act as two hosts, with <code>tc netem</code> impairing each direction. Each of 14 profiles ran with rate control off and on (28 runs). Every client records bitrate, fps, loss, jitter, round-trip time, freezes and audio concealment each second. The full analysis is in <code>docs/EVALUATION.md</code>.</p>
@@ -297,8 +299,8 @@ void ice_tick(peer_t *p, uint64_t now) {
     return cc-&gt;level != old;
 }</pre>
 <h2>Implementation</h2>
-<figure><img src="img/term-netem.png" style="max-width:100%;width:125mm"><figcaption>Impairment profiles applied with tc netem.</figcaption></figure>
-<figure><img src="img/term-cc.png" style="max-width:100%;width:150mm"><figcaption>Rate controller log during the 1 Mbit/s run: it backs off when the round-trip time rises, then climbs again.</figcaption></figure>
+<figure><img src="img/shot-netem.png" style="max-width:100%;width:125mm"><figcaption>Impairment profiles applied with tc netem.</figcaption></figure>
+<figure><img src="img/shot-cc.png" style="max-width:100%;width:150mm"><figcaption>Rate controller log during the 1 Mbit/s run: it backs off when the round-trip time rises, then climbs again.</figcaption></figure>
 <figure><img src="../results/timeline_rate1m.png" style="max-width:100%;width:125mm"><figcaption>1 Mbit/s cap applied at 9 s. Fixed rate (blue): the round-trip time climbs past 10 s and loss reaches 13.6 %. With rate control: the call stays at 20 fps.</figcaption></figure>
 <figure><img src="../results/timeline_schedule.png" style="max-width:100%;width:125mm"><figcaption>One call through changing bandwidth: clean, 2 Mbit/s, 1 Mbit/s, 500 kbit/s, 1 Mbit/s, clean.</figcaption></figure>
 <figure><img src="img/output-dashboard.png" style="max-width:100%;width:125mm"><figcaption>Dashboard (analysis/dashboard.py): live statistics of a running call, above the evaluation results.</figcaption></figure>
@@ -382,5 +384,6 @@ void ice_tick(peer_t *p, uint64_t now) {
     }
 }</pre>
 <h2>Implementation</h2>
-<figure><img src="img/term-test.png" style="max-width:100%;width:70mm"><figcaption>Unit tests covering the protocol code on both paths.</figcaption></figure>
+<figure><img src="img/shot-arch.png" style="max-width:100%;width:130mm"><figcaption>The architecture document, docs/ARCHITECTURE.md, in the repository.</figcaption></figure>
+<figure><img src="img/shot-test.png" style="max-width:100%;width:80mm"><figcaption>Unit tests covering the protocol code on both paths.</figcaption></figure>
 </body></html>
